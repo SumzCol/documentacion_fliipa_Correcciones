@@ -2,8 +2,8 @@ name: Slack reminder for open PRs
 
 on:
   schedule:
-    # 8:00, 11:00, 14:00 y 17:00 Colombia (UTC-5), lunes a viernes
-    - cron: "0 13,16,19,22 * * 1-5"
+    # 9:00 Colombia (UTC-5), lunes a viernes
+    - cron: "0 14 * * 1-5"
   workflow_dispatch:
 
 permissions:
