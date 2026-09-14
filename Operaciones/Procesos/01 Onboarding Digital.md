@@ -6,7 +6,7 @@ Registrar al cliente empresarial mediante un proceso completamente digital, iden
 
 > **Actualización (Check-in 16 jul 2026):** el estudio de crédito inicial queda completamente automatizado a través del motor de riesgo; no interviene un asesor humano en esta etapa. El flujo final del onboarding queda enfocado en dejar la solicitud lista para KYC + motor de riesgo.
 >
-**Actualización (ago 2026):** se elimina el uso del código OTP para la firma del contrato. Se mantienen los códigos de verificación enviados por WhatsApp y correo electrónico como mecanismos de validación definidos en el flujo. La validación específica del número telefónico dentro del onboarding queda pendiente de confirmar con el dueño del proceso.
+**Actualización (sep 2026):** la firma del contrato **sí usa OTP** (ver proceso 03). En onboarding se mantienen además los códigos de verificación por WhatsApp y correo electrónico. La validación específica del número telefónico dentro del onboarding queda pendiente de confirmar con el dueño del proceso.
 
 ---
 
@@ -175,7 +175,7 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 **Tiempo estimado:** ~10 segundos.
 
-> **Actualización (ago 2026):** se confirmó que el código OTP para la firma del contrato será eliminado. Los mecanismos de verificación mediante códigos enviados por WhatsApp y correo electrónico se mantienen. La definición específica de la validación del número telefónico dentro del onboarding queda pendiente de confirmar.
+> **Actualización (sep 2026):** el OTP de firma del contrato **no se elimina**; vive en el proceso de firma (documento 03). Los OTP de WhatsApp y correo de este onboarding se mantienen para validar contacto. La definición específica de la validación del número telefónico dentro del onboarding queda pendiente de confirmar.
 
 ---
 

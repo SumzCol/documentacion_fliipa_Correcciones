@@ -105,7 +105,7 @@ Ver el detalle completo en [Detalle del cotejo técnico (Parte 1 y Parte 2)](#de
 | 4 | HU-004 (v1.5) se llamaba "Completar KYC y cargar soportes desde el celular"; mezclaba biometría con carga de documentos y limitaba a celular | Se separa en **HU-006** (biometría) y **HU-007** (soportes bancarios); se elimina la restricción a celular |
 | 5 | Las HU deben ser atómicas; la 004 juntaba dos pasos no relacionados | Resuelto junto con el punto 4 |
 | 6 | La 004 no debía llamarse "flujo móvil" | Se corrige el título y la redacción en HU-006 y HU-007 |
-| 7 | La HU-006 (v1.5, firma por OTP) ya no debía existir; ahora la firma es con un proveedor externo de firma digital | Se reescribe como **HU-009**: "Firmar contrato mediante firma digital con proveedor externo" |
+| 7 | La HU-006 (v1.5, firma por OTP) se reescribió en v1.6 como proveedor externo | **Corrección sep 2026:** la firma **sigue siendo OTP**. HU-009 describe firma mediante OTP (el nombre de archivo histórico se mantiene). |
 | 8 | En general, ninguna HU debía limitarse a "un teléfono celular" | Se revisa y corrige en todas las fichas afectadas (HU-006, HU-007, entre otras) |
 | 9 | Faltaba una HU dedicada a clientes rechazados/en blacklist/sin crédito aprobado, con un mensaje de "no hay opciones disponibles" | Se crea **HU-011** nueva: "Ver mensaje de no disponibilidad de crédito" |
 | 10 | HU-009 (v1.5) mezclaba pago por pasarela y débito automático; el débito automático no es "yo como usuario" sino "yo como Fliipa" | Se separa en **HU-013** (prepago por PSE) y **HU-014** (débito automático, reescrita en tercera persona de sistema) |
@@ -130,7 +130,7 @@ Ver el detalle completo en [Detalle del cotejo técnico (Parte 1 y Parte 2)](#de
 | — | **HU-005** | Nueva: reintento/corrección de OTP |
 | HU-004 | HU-006 + HU-007 | Dividida en biometría y soportes bancarios |
 | HU-005 | HU-008 | Renumerada |
-| HU-006 | HU-009 | Reescrita: firma digital con proveedor externo |
+| HU-006 | HU-009 | Reescrita como HU-009; mecanismo vigente = OTP (sep 2026) |
 | HU-007 | HU-010 | Renumerada |
 | — | **HU-011** | Nueva: mensaje de no disponibilidad de crédito |
 | HU-008 | HU-012 | Renumerada |
@@ -170,7 +170,7 @@ Ver el detalle completo en [Detalle del cotejo técnico (Parte 1 y Parte 2)](#de
 | HU-003 | Parecía que solo existía "el modelo" a medias | La preaprobación y el cupo sugerido están operativos en el motor de riesgo, con carga de archivo de clientes preaprobados |
 | HU-005 | Dudaba si existía reenvío o corrección de datos de contacto | Confirmado: el cliente puede reenviar el OTP (con tiempo de espera) y corregir teléfono/correo sin reiniciar la solicitud |
 | HU-007 | Hablaba de un cargue "viejo" y dejaba duda sobre los extractos | Confirmado: se cargan 2 PDFs (certificación + extractos), la plataforma responde de inmediato y sube en segundo plano |
-| HU-009 | — | Confirmada la firma digital con proveedor externo (ver también observación 7) |
+| HU-009 | Comentario v1.6 hablaba de proveedor externo | Confirmado en plataforma: la firma es OTP (`send-signature-otp.ts` + `sign-contract.ts`). No hay proveedor externo. |
 | HU-011 | Decía "pendiente de verificar" | Confirmado el mensaje; se aclara que estar en blacklist **no** es lo que dispara este mensaje en el flujo actual |
 | HU-014 | Daba por hecho el cobro automático completo con Druo | Solo está lista la **conexión** de cuenta con Druo; el débito automático de punta a punta **aún no** está implementado como producto |
 | HU-032 | El rango de días de corte estaba incompleto | Confirmado: en la experiencia de usuario (admin y portal) el rango útil es **1–31**; a nivel interno la API aún admite 0 (detalle técnico, no de negocio) |

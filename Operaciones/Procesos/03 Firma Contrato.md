@@ -232,13 +232,15 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 
 **Actor:** Web (sistema).
 
-**Proceso:** Una vez validado el código, el sistema genera automáticamente el contrato firmado electrónicamente, aplicando el mecanismo de firma/no repudio definido para el producto*, y envía una copia del documento al correo electrónico del cliente como constancia de la operación.
+**Proceso:** Una vez validado el código, el sistema genera automáticamente el contrato firmado electrónicamente, aplicando el mecanismo de firma/no repudio definido para el producto*, y envía una copia del documento al correo electrónico del cliente como constancia de la operación. El correo usa la plantilla dinámica de Sendgrid *B2B - Firma de contrato*, se personaliza con el nombre del cliente y adjunta el PDF firmado.
 
-**Resultado:** Contrato firmado electrónicamente, con copia enviada al cliente.
+**Resultado:** Contrato firmado electrónicamente, con copia enviada al cliente (plantilla Sendgrid + PDF adjunto).
 
 **Tiempo estimado:** ~1 minuto (la generación del documento no es instantánea).
 
 > **Nota (Ajuste · jun 2026):** este paso está marcado en el journey como un paso ajustado en junio de 2026.
+
+> **Nota (Ajuste · sep 2026):** el envío de la copia firmada deja de ser un correo de texto plano. Pasa por la plantilla Sendgrid *B2B - Firma de contrato* (`contract` en el catálogo de communications). El asunto lo define la plantilla. El adjunto PDF se mantiene.
 
 **Placeholder\*:** el mecanismo de no repudio debe reformularse en términos de la **evidencia de la firma** que respalda la validez legal de la operación (por ejemplo, el registro del correo de verificación enviado, el código ingresado por el cliente y el registro de tiempos/timestamps de cada paso de la autenticación y la firma), en lugar de dejarlo como una referencia abierta a validar contra otros actores del mercado. Queda pendiente que el equipo legal/de producto confirme si esta evidencia es suficiente o si se requiere un mecanismo adicional.
 
@@ -411,7 +413,7 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 - La autenticación mediante documento de identidad y PIN busca garantizar que únicamente el titular pueda acceder al proceso de firma; los mensajes de error genéricos protegen contra ataques que buscan confirmar la existencia de una cuenta o cuál dato es incorrecto.
 - El journey distingue dos actores del Core distintos: Core Bancario, que habilita el proceso al inicio, y Core de Crédito/Originación*, que aprueba el crédito al final y da inicio a la calculadora. Esta distinción es uno de los principales placeholders del proceso.
 - La firma electrónica requiere una validación adicional mediante código enviado al correo electrónico del cliente; la validez legal se sustenta en la evidencia generada durante ese proceso (registro del código, del correo y de los tiempos), no en un mecanismo externo adicional.
-- El contrato se genera automáticamente una vez finaliza la firma, y se envía copia al correo del cliente.
+- El contrato se genera automáticamente una vez finaliza la firma, y se envía copia al correo del cliente mediante la plantilla Sendgrid *B2B - Firma de contrato*, con el PDF firmado adjunto.
 - La asignación del bono D1 y la aprobación final del crédito ocurren únicamente después de completar exitosamente todo el proceso de firma.
 - El objetivo comercial (firma digital, desde el celular, en minutos) debe validarse frente a los tiempos estimados detallados en este documento una vez el flujo esté implementado.
 - Por consistencia con el proceso de KYC (documento 3), se incorporó la trazabilidad por Slack para los eventos críticos de este journey; sin embargo, a diferencia de KYC —que ya cuenta con un estado de "posible rechazo" y revisión manual definidos—, este documento aún no define un flujo concreto para el caso en que Core de Crédito/Originación no apruebe un crédito ya firmado. Se recomienda evaluar con el dueño del proceso si aplica un patrón similar (estado intermedio + revisión manual) para mantener consistencia entre ambos journeys.
