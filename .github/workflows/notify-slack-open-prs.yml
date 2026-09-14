@@ -1,0 +1,96 @@
+name: Slack reminder for open PRs
+
+on:
+  schedule:
+    # 9:00 Colombia (UTC-5), lunes a viernes
+    - cron: "0 14 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  remind-open-prs:
+    name: Slack — open PRs reminder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Slack webhook secret
+        env:
+          WEBHOOK: ${{ secrets.DEVELOPERS_SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::error::Secret DEVELOPERS_SLACK_WEBHOOK_URL is empty or missing."
+            exit 1
+          fi
+
+      - name: Build reminder payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          prs="$(gh pr list --repo "$REPO" --state open --limit 50 \
+            --json number,title,url,author,createdAt,additions,deletions,changedFiles,isDraft \
+            --jq '[.[] | select(.isDraft == false)]')"
+          count="$(echo "$prs" | jq 'length')"
+
+          if [ "$count" -eq 0 ]; then
+            echo "No hay PRs abiertas. No se envía recordatorio."
+            echo "skip=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          echo "$prs" | jq -c \
+            --arg repo "$REPO" \
+            --arg count "$count" \
+            '{
+              text: ("<!channel> Recordatorio: hay \($count) PR(s) de documentación sin merge"),
+              blocks: (
+                [
+                  {
+                    type: "header",
+                    text: { type: "plain_text", text: "Recordatorio: PRs sin merge", emoji: true }
+                  },
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: ("<!channel> Hay *\($count)* pull request(s) abiertas en `\($repo)`. Falta revisión/aprobación para mergear.")
+                    }
+                  }
+                ]
+                + [
+                    .[] | {
+                      type: "section",
+                      text: {
+                        type: "mrkdwn",
+                        text: ("*<\(.url)|#\(.number) — \(.title)>*\nAutor: `\(.author.login)` · Abierta: \(.createdAt[0:10]) · Cambios: `+\(.additions) / -\(.deletions)` (\(.changedFiles) files)")
+                      }
+                    }
+                  ]
+                + [
+                    {
+                      type: "context",
+                      elements: [
+                        {
+                          type: "mrkdwn",
+                          text: ("Se necesita al menos 1 aprobación. <https://github.com/\($repo)/pulls|Ver todas las PRs>")
+                        }
+                      ]
+                    }
+                  ]
+              )
+            }' > "$GITHUB_WORKSPACE/slack-open-prs-payload.json"
+
+          echo "skip=false" >> "$GITHUB_ENV"
+
+      - name: Notify Slack
+        if: env.skip != 'true'
+        uses: slackapi/slack-github-action@v3.0.1
+        with:
+          errors: true
+          webhook: ${{ secrets.DEVELOPERS_SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload-file-path: slack-open-prs-payload.json

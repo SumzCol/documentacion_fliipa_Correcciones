@@ -17,6 +17,7 @@
 | 0.1 | 2026-07-06 | Maria Fernanda Herazo | Borrador vacío (pendiente de completar). |
 | 1.0 | 2026-07-10 | María Fernanda Herazo | Primera versión completa: requerimientos de seguridad, auditoría y trazabilidad, disponibilidad/monitoreo y cumplimiento, organizados en tablas por categoría, construidos a partir de las reglas de negocio y una revisión directa del código fuente de `credits-platform-main`. |
 | 1.1 | 2026-08-13 | María Fernanda Herazo | Se corrige RNF-013: ya no describe un bloqueo por fuerza bruta sobre un código de verificación (OTP) para la firma, dado que ese flujo se eliminó y la firma ahora es digital con un proveedor externo (consistente con RF-013 y HU-009). RNF-001 y RNF-007 se mantienen sin cambios: son hallazgos vigentes sobre el OTP de identidad en el checkout, no sobre la firma. |
+| 1.2 | 2026-09-09 | Equipo técnico | Se revierte RNF-013: la firma del contrato **sí usa OTP**. El bloqueo por intentos fallidos (`SIGNATURE_LOCKOUT_ENABLED`, 3 intentos, 24 h) vuelve a aplicar. No hay proveedor externo de firma. |
 
 ---
 
@@ -73,7 +74,7 @@ Cada requerimiento usa el identificador `RNF-XXX`. La columna "Severidad" solo a
 |----|----------------|-----------|---------------------------|--------|
 | RNF-011 | El sistema debe permitir monitorear en tiempo real la disponibilidad y latencia del core bancario y de la base de datos. | Alta | Conforme. | `backends/admin/src/services/system-core-health.service.ts`, `cloud-sql-status.service.ts` |
 | RNF-012 | El sistema debe monitorear la disponibilidad de los proveedores externos críticos para el negocio (riesgo, biometría, recaudo, notificaciones, core bancario). | Alta | No conforme: el monitoreo de terceros implementado cubre GitHub, npm y GCP, pero no Experian, Druo, el proveedor de biometría, Zenvia/Sendgrid ni el core bancario. | `backends/admin/src/controllers/system-third-party-status.controller.ts` |
-| RNF-013 | El mecanismo de firma digital con el proveedor externo debe contar con controles de protección equivalentes contra intentos abusivos o fraudulentos, ya que la firma ya no depende de un código de verificación (OTP) propio del sistema. | Media | Pendiente de confirmar con el equipo técnico y el proveedor externo qué controles de seguridad aplica sobre los intentos de firma; el bloqueo de 24 horas sobre el código de verificación, documentado en versiones previas, queda obsoleto al eliminarse el flujo de OTP para la firma (ver RF-013 y HU-009 en Historias de Usuario). | Pendiente de confirmar fuente en la integración con el proveedor externo de firma digital. |
+| RNF-013 | El OTP de firma del contrato debe bloquearse temporalmente tras varios intentos fallidos, para proteger contra fuerza bruta. | Media | Conforme: `otpAttempts` (default 3) y `blockedUntil` (24 h), activable mediante `SIGNATURE_LOCKOUT_ENABLED`. | `backends/b2b/src/services/sign-contract.ts`, `backends/b2b/src/config/constants.ts` |
 | RNF-014 | El acceso al portal del cliente debe bloquearse temporalmente tras varios intentos fallidos de PIN. | Media | Conforme: `loginAttempts` (default 3) y `lockedAt`, activable mediante `LOGIN_LOCKOUT_ENABLED`. | `backends/b2b/src/db/models/Client.ts`, `backends/b2b/src/config/index.ts` |
 
 ### Cumplimiento y datos
