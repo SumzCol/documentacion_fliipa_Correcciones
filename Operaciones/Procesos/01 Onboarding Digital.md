@@ -297,9 +297,9 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 **Sistemas involucrados:** Drúo.
 
-**Información utilizada:** Entidad financiera y número de cuenta bancaria.
+**Información utilizada:** Entidad financiera, tipo de cuenta (ahorros o corriente) y número de cuenta bancaria.
 
-**Proceso:** El cliente selecciona el banco e ingresa su número de cuenta. El sistema envía la información a Drúo para validación, la cual ocurre de forma **asíncrona** (no bloquea al cliente en pantalla mientras se resuelve).
+**Proceso:** El cliente selecciona el banco, indica el tipo de cuenta (ahorros o corriente) e ingresa su número de cuenta. El sistema persiste estos datos en el checkout y en la cuenta bancaria del cliente, y los envía a Drúo para validación (incluyendo el subtipo correspondiente: ahorros → `SAVINGS`, corriente → `CHECKING`). La validación ocurre de forma **asíncrona** (no bloquea al cliente en pantalla mientras se resuelve).
 
 **Resultado:** Cuenta bancaria enviada a validación ante Drúo antes de autorizar el débito automático.
 
@@ -388,7 +388,7 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 - Teléfono de contacto (dato de contacto, sin validación OTP).
 - Código de verificación (correo electrónico).
 - PIN de seguridad.
-- Cuenta bancaria.
+- Cuenta bancaria (banco, tipo ahorros/corriente y número).
 - Certificación bancaria.
 - Extractos bancarios.
 - Localidad habitual de compra.
