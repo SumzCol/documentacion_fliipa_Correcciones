@@ -55,6 +55,8 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 > **Nota técnica (Ajuste · jun 2026):** integración de envío con Sendgrid y Zenvia.
 
+> **Nota técnica (Ajuste · sep 2026):** los OTP de WhatsApp (onboarding y firma) usan plantillas Zenvia definidas en el catálogo de código de `communications` (`otp`, `signatureOtp`). La API key de Zenvia sigue en Secret Manager.
+
 ---
 
 ### 2. Registro del documento de identificación

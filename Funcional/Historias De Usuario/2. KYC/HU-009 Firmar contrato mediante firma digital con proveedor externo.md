@@ -6,7 +6,10 @@
 | **Actor** | Cliente empresarial |
 | **Historia** | Como cliente empresarial, quiero firmar mi contrato mediante un código OTP, para activar mi cupo sin papeleo físico. |
 | **Prioridad** | Alta |
-| **Criterios de aceptación** | El cliente revisa el contrato y lo firma a través del portal Usuario por medio de un OTP enviado por los canales definido para este flujo. El sistema genera el PDF firmado y lo envía por correo al cliente con la plantilla Sendgrid *B2B - Firma de contrato* (nombre del cliente + PDF adjunto). |
+| **Criterios de aceptación** | El cliente revisa el contrato y lo firma a través del portal Usuario por medio de un OTP enviado por los canales definido para este flujo. El sistema genera el PDF firmado y lo envía por correo al cliente. |
+| **Relaciones** | Casos de uso: [CU-007](../../Casos de Uso/2. KYC/CU-007 Firmar contrato mediante firma digital.md). Requerimientos: [RF-013](../../Requerimientos/Requerimientos Funcionales.md),[RF-014](../../Requerimientos/Requerimientos Funcionales.md), (pendiente confirmar vigencia dado el cambio de mecanismo). |
+| **Referencias** | `b2b/fliipa-back/src/controllers/clients/sign-contract.ts`, `send-contract/send-contract.controller.ts` |
+| **Criterios de aceptación** | El cliente revisa el contrato y lo firma a través del portal Usuario por medio de un OTP enviado por los canales definido para este flujo. El sistema genera el PDF firmado, lo envía por correo al cliente con la plantilla Sendgrid *B2B - Firma de contrato* (nombre del cliente + PDF adjunto) y envía un WhatsApp de aviso con la plantilla Zenvia `contractSigned`. |
 | **Relaciones** | Casos de uso: [CU-007](../../Casos de Uso/2. KYC/CU-007 Firmar contrato mediante firma digital.md). Requerimientos: [RF-013](../../Requerimientos/Requerimientos Funcionales.md), [RF-014](../../Requerimientos/Requerimientos Funcionales.md). |
 | **Referencias** | `sign-contract.ts`, `send-signature-otp.ts`, `send-contract/send-contract.controller.ts` |
  **Autor** | María Fernanda Herazo |

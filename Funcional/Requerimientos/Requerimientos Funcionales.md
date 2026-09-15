@@ -22,6 +22,7 @@
 | 1.4 | 2026-08-20 | María Fernanda Herazo | Se agrega RF-036 (Visualización y confirmación del cupo aprobado), separado de RF-010 (consulta de riesgo crediticio del analista). Corresponde a la nueva historia HU-045 en Historias de Usuario, desprendida de HU-023. |
 | 1.5 | 2026-08-20 | María Fernanda Herazo | Se agregan RF-037 (Administración de usuarios, roles y permisos del panel) y RF-038 (Impersonación de clientes para soporte), a partir de la revisión de código documentada en la nueva sección [Autorizaciones, Roles y Permisos](../../Autorizacion Roles y Permiso/README.md). Corresponden a las nuevas historias HU-047 y HU-048. |
 | 1.6 | 2026-09-09 | Equipo técnico | Se actualiza RF-014: el correo de copia firmada usa la plantilla Sendgrid *B2B - Firma de contrato* (catálogo `contract` en communications) y sigue adjuntando el PDF. |
+| 1.7 | 2026-09-09 | Equipo técnico | RF-014: post-firma también notifica por WhatsApp (`contractSigned`). Aprobación KYC: correo `welcome` + WhatsApp `creditApproved`. |
 | 1.7 | 2026-09-09 | Equipo técnico | Se corrige RF-013 y RF-006: la firma del contrato **sí se realiza con OTP** (mecanismo vigente en código). Se revierte la nota de ago-2026 que la describía como proveedor externo. |
 
 ---

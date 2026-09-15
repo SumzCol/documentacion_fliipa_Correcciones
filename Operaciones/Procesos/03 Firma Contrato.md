@@ -56,15 +56,15 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 
 **Actor:** Web (sistema).
 
-**Sistemas involucrados:** Canales de contacto (correo electrónico, mensaje o llamada)*.
+**Sistemas involucrados:** Sendgrid (correo) y Zenvia (WhatsApp).
 
-**Proceso:** El sistema contacta al cliente mediante correo electrónico, mensaje (WhatsApp y SMS) o llamada, informando que el crédito fue aprobado y que puede continuar con la firma electrónica.
+**Proceso:** Al aprobarse el crédito, el sistema notifica al cliente por correo electrónico (plantilla Sendgrid `welcome`) y por WhatsApp (plantilla Zenvia `creditApproved`), informando que el crédito fue aprobado y que puede continuar con la firma electrónica. SMS y llamada quedan fuera del MVP.
 
-**Resultado:** Cliente es contactado para continuar el proceso de firma.
+**Resultado:** Cliente notificado por correo y WhatsApp para continuar el proceso de firma.
 
 **Tiempo estimado:** Instantáneo del lado del sistema; la recepción depende del canal y es asíncrona.
 
-**Placeholder\*:** no está definida la plataforma técnica exacta usada para este contacto (¿Sendgrid/Zenvia, igual que en onboarding y captación comercial, u otro proveedor para mensaje/llamada?), ni el criterio para elegir entre correo, mensaje o llamada. Los mensajes de texto (SMS) no están dentro del alcance del MVP, pero se mantienen documentados para una implementación futura.
+> **Nota (Ajuste · sep 2026):** el contacto de aprobación dejó de ser un placeholder de canal. En código: correo `welcome` + WhatsApp `creditApproved` (catálogos de `communications`). SMS/llamada no aplican en el MVP.
 
 ---
 
@@ -232,15 +232,15 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 
 **Actor:** Web (sistema).
 
-**Proceso:** Una vez validado el código, el sistema genera automáticamente el contrato firmado electrónicamente, aplicando el mecanismo de firma/no repudio definido para el producto*, y envía una copia del documento al correo electrónico del cliente como constancia de la operación. El correo usa la plantilla dinámica de Sendgrid *B2B - Firma de contrato*, se personaliza con el nombre del cliente y adjunta el PDF firmado.
+**Proceso:** Una vez validado el código, el sistema genera automáticamente el contrato firmado electrónicamente, aplicando el mecanismo de firma/no repudio definido para el producto*, y notifica al cliente por dos canales: (1) correo con la plantilla Sendgrid *B2B - Firma de contrato* (`contract`), personalizado con el nombre del cliente y con el PDF firmado adjunto; (2) WhatsApp con la plantilla Zenvia `contractSigned` (sin adjunto; el PDF viaja solo por correo). Ambos envíos son fail-open respecto de la firma.
 
-**Resultado:** Contrato firmado electrónicamente, con copia enviada al cliente (plantilla Sendgrid + PDF adjunto).
+**Resultado:** Contrato firmado electrónicamente, con copia PDF por correo y aviso por WhatsApp.
 
 **Tiempo estimado:** ~1 minuto (la generación del documento no es instantánea).
 
 > **Nota (Ajuste · jun 2026):** este paso está marcado en el journey como un paso ajustado en junio de 2026.
 
-> **Nota (Ajuste · sep 2026):** el envío de la copia firmada deja de ser un correo de texto plano. Pasa por la plantilla Sendgrid *B2B - Firma de contrato* (`contract` en el catálogo de communications). El asunto lo define la plantilla. El adjunto PDF se mantiene.
+> **Nota (Ajuste · sep 2026):** el correo post-firma usa la plantilla Sendgrid *B2B - Firma de contrato* (`contract`) con PDF adjunto. En paralelo se envía WhatsApp `contractSigned` (catálogo `whatsapp-templates.ts`).
 
 **Placeholder\*:** el mecanismo de no repudio debe reformularse en términos de la **evidencia de la firma** que respalda la validez legal de la operación (por ejemplo, el registro del correo de verificación enviado, el código ingresado por el cliente y el registro de tiempos/timestamps de cada paso de la autenticación y la firma), en lugar de dejarlo como una referencia abierta a validar contra otros actores del mercado. Queda pendiente que el equipo legal/de producto confirme si esta evidencia es suficiente o si se requiere un mecanismo adicional.
 
@@ -360,7 +360,7 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 - La aceptación de las condiciones del crédito es obligatoria antes de acceder al detalle completo y al documento legal.
 - El contrato debe visualizarse antes de la firma electrónica.
 - La firma solo se completa cuando el código de verificación es validado correctamente; si falla, el cliente puede reintentar o contactar al servicio al cliente, quien evalúa el caso puntual antes de decidir la solución.
-- Una vez finalizada la firma, el sistema genera automáticamente el documento legal firmado y envía copia al correo del cliente.
+- Una vez finalizada la firma, el sistema genera automáticamente el documento legal firmado, envía copia PDF al correo del cliente y un aviso por WhatsApp (`contractSigned`).
 - El mecanismo de firma electrónica debe garantizar la evidencia de la firma (registro del código de verificación, del correo y de los tiempos de cada paso) como respaldo de su validez legal.
 - El bono D1 únicamente se asigna cuando la firma ha sido completada exitosamente.
 - El bono D1 es único e intransferible; el sistema no debe permitir reemplazarlo una vez asignado a un cliente.
@@ -427,7 +427,7 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 > **Pendiente de validar con el dueño del proceso:**
 >
 > - Confirmar si las dos comunicaciones de condiciones del crédito (paso 5 y paso 7) deben mantenerse como pantallas independientes o si deben fusionarse, dado que la pantalla real ya muestra tasa, plan de pagos y fecha desde el primer momento. *(placeholder — pasos 5 y 7)*
-> - Confirmar la plataforma técnica exacta usada para el contacto inicial del paso 2 (correo, mensaje o llamada) y el criterio de selección de canal. *(placeholder — paso 2)*
+> - ~~Confirmar la plataforma técnica exacta usada para el contacto inicial del paso 2~~ **Resuelto (sep 2026):** correo Sendgrid `welcome` + WhatsApp Zenvia `creditApproved`; SMS/llamada fuera del MVP.
 > - Confirmar el procedimiento operativo exacto de recuperación de PIN vía canal de soporte. *(placeholder — paso 4)*
 > - Confirmar si existe contenido de "congelación del cupo por mora" a comunicar en el paso 5, y su redacción definitiva (se eliminó "circuito cerrado" del documento). *(placeholder — paso 5)*
 > - Confirmar el número máximo de reenvíos del código de verificación, el tiempo de vigencia del código antes de su expiración, y si toda falla de verificación debe alertar por Slack o solo a partir de cierto número de intentos. *(placeholder — paso 11)*

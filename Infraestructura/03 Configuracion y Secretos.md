@@ -56,6 +56,19 @@ bash scripts/prod-runtime-secrets.sh verify
 
 Los valores viven únicamente en Secret Manager; no se requiere `runtime-secrets.local.env` para desplegar en PROD (ese archivo aplica a la siembra local/STG).
 
+## Plantillas de correo y WhatsApp (no son secretos)
+
+Los IDs de plantilla de **Sendgrid** y **Zenvia** no van en Secret Manager ni como literales de Cloud Run. Viven en catálogos versionados en el código de `services/communications`:
+
+| Canal | Catálogo | Ejemplos de keys |
+|---|---|---|
+| Email (Sendgrid) | `src/constants/email-templates.ts` | `welcome`, `otp`, `contract`, `requestRejected` |
+| WhatsApp (Zenvia) | `src/constants/whatsapp-templates.ts` | `otp`, `signatureOtp`, `creditApproved`, `contractSigned` |
+
+En runtime, B2B (u otro caller) envía la **key** estable; communications resuelve el ID del proveedor. Lo que sí permanece en secretos/config de infra es la credencial (`SENDGRID_API_KEY`, `ZENVIA_API_KEY`) y el número de origen de Zenvia (`ZENVIA_PHONE_NUMBER`, literal).
+
+> **Nota (sep 2026):** los OTP de WhatsApp dejaron de leer `OTP_WHATSAPP_TEMPLATE_ID` / `SIGNATURE_OTP_WHATSAPP_TEMPLATE_ID` desde env; esos IDs pasaron al catálogo `whatsapp-templates.ts`. Las notificaciones de crédito aprobado (`creditApproved`) y contrato firmado (`contractSigned`) también viven en ese catálogo (sin variables de entorno).
+
 ## URLs entre servicios
 
 `url-bindings.json` define, por `packageDir`, qué variable de entorno recibe la URL de qué otro servicio (`from: "services.<slug>"`) o de un valor calculado (`from: "computed.<nombre>"`), con un `suffix` opcional de *path*. Ejemplos: `backends/b2b` recibe `CORE_BASE_URL`, `COMMUNICATIONS_SERVICE_URL` y `RULES_ENGINE_URL`; `apps/checkout` recibe `API_BASE_URL` y, como variable de **build-time** (`buildTime: true`, porque Next.js la *inyecta* en el bundle), `NEXT_PUBLIC_REDEMPTION_BASE_URL`.
