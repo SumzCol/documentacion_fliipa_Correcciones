@@ -1,0 +1,98 @@
+name: Notify Slack on PR opened
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  notify-slack:
+    name: Slack — new PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require Slack webhook secret
+        env:
+          WEBHOOK: ${{ secrets.DEVELOPERS_SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "::error::Secret DEVELOPERS_SLACK_WEBHOOK_URL is empty or missing. Add it under Settings → Secrets and variables → Actions (repo or org). Copy the same Incoming Webhook URL used in credits-platform."
+            exit 1
+          fi
+
+      - name: Build Slack JSON payload
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_REPO: ${{ github.repository }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_COMMITS: ${{ github.event.pull_request.commits }}
+          PR_ADDITIONS: ${{ github.event.pull_request.additions }}
+          PR_DELETIONS: ${{ github.event.pull_request.deletions }}
+          PR_FILES: ${{ github.event.pull_request.changed_files }}
+          PR_CREATED_AT: ${{ github.event.pull_request.created_at }}
+          PR_ACTOR: ${{ github.actor }}
+          PR_REVIEWERS: ${{ join(github.event.pull_request.requested_reviewers.*.login, ', ') }}
+        run: |
+          set -euo pipefail
+          reviewers=${PR_REVIEWERS:-—}
+
+          jq -nc \
+            --arg number "$PR_NUMBER" \
+            --arg title "$PR_TITLE" \
+            --arg url "$PR_URL" \
+            --arg repo "$PR_REPO" \
+            --arg author "$PR_AUTHOR" \
+            --arg commits "$PR_COMMITS" \
+            --arg additions "$PR_ADDITIONS" \
+            --arg deletions "$PR_DELETIONS" \
+            --arg files "$PR_FILES" \
+            --arg reviewers "$reviewers" \
+            --arg actor "$PR_ACTOR" \
+            --arg createdAt "$PR_CREATED_AT" \
+            '{
+              text: ("<!channel> Nueva PR de documentación #\($number) — \($title)"),
+              blocks: [
+                {
+                  type: "header",
+                  text: { type: "plain_text", text: "Nueva PR de documentación", emoji: true }
+                },
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: ("<!channel> *<\($url)|#\($number) — \($title)>*")
+                  }
+                },
+                {
+                  type: "section",
+                  fields: [
+                    { type: "mrkdwn", text: ("*Repositorio*\n`\($repo)`") },
+                    { type: "mrkdwn", text: ("*Autor*\n`\($author)`") },
+                    { type: "mrkdwn", text: ("*Commits*\n`\($commits)`") },
+                    { type: "mrkdwn", text: ("*Cambios*\n`+\($additions) / -\($deletions)` (\($files) files)") },
+                    { type: "mrkdwn", text: ("*Reviewers*\n\($reviewers)") }
+                  ]
+                },
+                {
+                  type: "context",
+                  elements: [
+                    {
+                      type: "mrkdwn",
+                      text: ("Creada por `\($actor)` · \($createdAt) · <\($url)|Abrir PR>")
+                    }
+                  ]
+                }
+              ]
+            }' > "$GITHUB_WORKSPACE/slack-pr-payload.json"
+
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v3.0.1
+        with:
+          errors: true
+          webhook: ${{ secrets.DEVELOPERS_SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload-file-path: slack-pr-payload.json
