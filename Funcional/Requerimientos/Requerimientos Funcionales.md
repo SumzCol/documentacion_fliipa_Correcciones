@@ -115,7 +115,7 @@ Cubre los 11 procesos de negocio definidos en [Alcance del Producto](../../Produ
 
 | ID | Nombre | Descripción | Actor(es) | Prioridad | Estado | Fuente |
 |----|--------|--------------|-----------|-----------|--------|--------|
-| RF-022 | Cobro automático y prepago | Soportar el cobro automático de la cuota mediante Druo y el prepago voluntario por PSE. | Cliente empresarial, sistema | Alta | Parcialmente verificable: integración configurada con Druo; la ejecución del prepago por PSE no se encontró en el código disponible. | `backends/b2b/src/config/constants.ts` (`druo`), modelo `BankAccount` (`druoConnectionStatus`) |
+| RF-022 | Cobro automático y prepago | Soportar el cobro automático de la cuota mediante Druo y el prepago voluntario por PSE. | Cliente empresarial, sistema | Alta | Parcial: prepago voluntario por PSE vía checkout Druo + webhook `transaction.successful` → `payment_references` implementado; débito automático (HU-014) pendiente. | `backends/b2b` (payment link + `apply-druo-transaction-event`), `services/webhooks` (druo webhook), `backends/core` (`POST /payments`) |
 | RF-023 | Reversión de desembolso | Eliminar un desembolso y restaurar automáticamente el cupo cuando el desembolso estaba activo. | Administrador del producto, sistema | Media | Implementado | `backends/admin/src/services/disbursements.service.ts` (`softDeleteDisbursement`) |
 | RF-024 | Simulación de plan de pago | Permitir simular el plan de pago diario de un desembolso considerando tasa corriente, tasa de mora y umbral de días, con descarga en CSV. | Administrador del producto | Media | Implementado | `backends/admin/src/controllers/calculator.controller.ts`, `apps/admin/src/components/payment-plan-simulator.tsx` |
 
