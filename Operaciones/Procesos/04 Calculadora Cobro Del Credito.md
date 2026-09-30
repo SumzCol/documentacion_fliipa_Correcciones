@@ -70,7 +70,18 @@ Cada paso incluye el **proceso** (qué ocurre técnica u operativamente) y un **
 
 **Tiempo estimado:** Instantáneo una vez el worker detecta el uso del bono (cálculo automático).
 
-**Placeholder\*:** las reglas exactas de cálculo de intereses y amortización (tasa aplicada, método de amortización, redondeos) no están detalladas en el journey; pendientes de confirmar con el dueño del proceso. *(Nota: en la reunión de Weekly Planning del 27 jul 2026 se validó la tasa comercial del producto — 87% E.A. más el cargo "Ley Pyme" del 7.5% del capital más IVA — pero no se discutió el método de amortización ni los redondeos aplicados por la calculadora, por lo que este placeholder sigue abierto.)*
+**Actualización (sep 2026):** la calculadora productivada es **v2** (1 cuota / 30 días calendario), alineada al simulador Motor Fliipa. Reglas vigentes:
+
+- **Vencimiento:** día 30 desde el desembolso (día 0). El crédito sigue **al día** ese día inclusive.
+- **Mora:** inicia el **día 31**. Se suspende el interés corriente; se causan interés de mora (simple diario sobre capital adeudado) y gastos de cobranza.
+- **Interés corriente:** compuesto diario con truncamiento (`ROUNDDOWN`) a 2 decimales sobre la base de causación (capital + interés corriente no pagado).
+- **Gastos de cobranza:** tasa diaria × **capital adeudado vigente** en mora; tope acumulado (antes de IVA) = % del **capital original** del desembolso (default 0,35% diario / tope 30%).
+- **Administración:** se causa el día del desembolso (+ IVA). No hay segunda administración automática en mora en el producto actual.
+- **Cascada de imputación de pagos:** 1) cobranza + IVA → 2) interés de mora → 3) administración + IVA → 4) interés corriente (incl. el congelado al entrar en mora) → 5) capital.
+- **Tope global de pago (política interna):** el cliente no paga, en total, más de **2× el capital** desembolsado; el saldo exigible se limita a ese tope.
+- **Redondeo:** truncamiento hacia abajo a 2 decimales en causación e IVA.
+
+> La tasa comercial publicada y cargos legacy (Ley Pyme / mipyme) quedan fuera de v2; el producto activo usa administración fija + IVA y las tasas E.A. del tarifario vigente.
 
 ---
 
@@ -206,6 +217,7 @@ Cada paso incluye el **proceso** (qué ocurre técnica u operativamente) y un **
 - Cuando el saldo llega a cero, el crédito se liquida y el cupo vuelve a estar disponible.
 - No se permiten créditos simultáneos por cliente; el desembolso solo puede utilizarse en compras dentro de D1 *(reunión Weekly Planning, 27 jul 2026)*.
 - Si el pago no se realiza oportunamente, el caso continúa hacia el proceso de cobranza.
+- **Calculadora v2 (sep 2026):** 1 cuota a 30 días; mora desde el día 31; cobranza diaria sobre capital adeudado (tope % del capital original); cascada cobranza → mora → administración → corriente → capital; redondeo ROUNDDOWN a 2 decimales; tope de pago 2× capital.
 - **En consistencia con el estándar de trazabilidad acordado para el ciclo del crédito (documento 4), el sistema notifica en tiempo real por el canal de Slack de operaciones —con enlace directo al caso en el panel de administración— los siguientes eventos: falla del débito automático con Drúo, error durante el registro del pago o la actualización del saldo, y todo caso en que el crédito quede en mora.**
 
 ---
@@ -261,7 +273,7 @@ Cada paso incluye el **proceso** (qué ocurre técnica u operativamente) y un **
 > **Pendiente de validar con el dueño del proceso:**
 >
 > - Confirmar la periodicidad exacta del worker que detecta el uso del bono en D1 y, por lo tanto, el tiempo real entre el uso del bono y la generación del crédito. *(placeholder — paso 2)*
-> - Confirmar el método de amortización y los redondeos aplicados por la calculadora (la tasa comercial —87% E.A. + Ley Pyme 7.5% + IVA— ya fue validada en la reunión del 27 jul 2026, pero el método de cálculo no). *(placeholder — paso 3)*
+> - ~~Confirmar el método de amortización y los redondeos aplicados por la calculadora~~ **Resuelto (sep 2026):** calculadora v2 alineada al Motor Fliipa (ver paso 3). La tasa comercial legacy Ley Pyme queda fuera de v2.
 > - Confirmar las condiciones para permitir pagos anticipados parciales (monto mínimo, si se puede prepagar solo una parte del saldo). *(placeholder — paso 5)*
 > - Confirmar la frecuencia de ejecución del débito automático con Drúo (un único intento en la fecha de corte o varios intentos, y cómo se articula con los reintentos ya definidos en el proceso de Cobranza). Ya se confirmó que no requiere respuesta en tiempo real, pero no el número de reintentos. *(placeholder — paso 6b)*
 > - Confirmar las reglas exactas para liberar nuevamente el cupo de crédito después de la liquidación, y su relación con la evaluación de renovación de cupo del documento de Dispersión de fondos. *(placeholder — paso 9a)*
@@ -275,3 +287,4 @@ Cada paso incluye el **proceso** (qué ocurre técnica u operativamente) y un **
 - Documento de Alcance del Producto.
 - Estándar de trazabilidad por Slack (alertas con enlace al panel de administración) definido en el documento 4, Firma de contrato y activación, aplicado por consistencia a este documento.
 - Notas de la reunión de **Weekly Planning** del **27 de julio de 2026** (integración con Drúo, carácter asíncrono del débito automático, explicación de la red ACH, restricción de créditos simultáneos, tasa y cargo "Ley Pyme").
+- Simulador / Motor de calculadora Fliipa (`Simulador calculadora credito_Fliipa_20260916.xlsx`) y calculadora kernel v2 en `credits-platform` (sep 2026).
