@@ -40,8 +40,8 @@ product-fintech
 | `core` | `backends/core` | node | A | IAM | `creds-runtime-core` | `fliipa_banking_core` |
 | `communications` | `services/communications` | node | C | IAM | `creds-runtime-product` | `communications` |
 | `webhooks` | `services/webhooks` | node | B | público | `creds-runtime-public` | — |
-| `b2b` | `backends/b2b` | node | A | público | `creds-runtime-public` | `fliipa_b2b` |
-| `admin-back` | `backends/admin` | node | B | público | `creds-runtime-public` | `fliipa_banking_core` |
+| `b2b` | `backends/b2b` | node | A | público | `creds-runtime-public` | `fliipa_b2b` (incluye `product_settings`) |
+| `admin-back` | `backends/admin` | node | B | público | `creds-runtime-public` | `fliipa_banking_core` (settings de crédito/core; settings de producto vía S2S a b2b) |
 | `checkout` | `apps/checkout` | Next.js | A | público | `creds-runtime-public` | — |
 | `redemption` | `apps/redemption` | Next.js | A | público | `creds-runtime-public` | — |
 | `admin` | `apps/admin` | Next.js | B | público | `creds-runtime-public` | — |
@@ -68,7 +68,8 @@ scripts/
   prod-runtime-secrets.sh      put | verify secretos
   prod-urls.sh                 sync → apply → verify
   pause|resume-prod-cloud-run  costo diario
-  run-prod-seeds.sh            seeds de admin + settings
+  run-prod-seeds.sh            seeds de admin + settings de core (kernel);
+                               seeds de producto (`product_settings`) viven en b2b
   provision-prod-jobs.sh       Cloud Run Job creds-jobs-prod
   provision-prod-jobs-schedulers.sh  Cloud Scheduler → JOB_NAME
 
