@@ -73,13 +73,13 @@ La cuenta bancaria informada por el cliente se registra también en Druo para ha
 
 **Información utilizada:**
 
-- Score (puntaje) mínimo requerido tanto para persona jurídica como persona natural*.
+- Score (puntaje) mínimo requerido tanto para persona jurídica como persona natural*. Para **persona natural (CC/CE)** se compara el score HPN del titular contra el mínimo PN. Para **persona jurídica (NIT)** el check de score aprueba si se cumple **al menos uno** de estos, según los toggles activos en configuración: (1) score de la empresa (Advance/HPJ) ≥ mínimo PJ, o (2) score HPN del representante legal ≥ mínimo PN. Si ambos cumplen, prevalece el score de la empresa. En el Admin se muestran ambos scores y con cuál se aprobó el check. Capacidad de endeudamiento y mora del NIT siguen evaluándose sobre el sujeto empresa (PJ) cuando hay datos de empresa.
 - Capacidad de endeudamiento*.
 - Datos de contacto reportados mediante el servicio Reconocer de Experian vs. datos de contacto reportados durante el proceso de onboarding.
 - Localidad habitual declarada por el cliente durante el onboarding, comparada de forma automática contra la tienda habitual registrada en el histórico transaccional de D1*.
 - Comparación de la cuenta bancaria ingresada por el cliente vs. el servicio "Historia de Crédito" de Experian.
 
-**Proceso:** El motor de reglas toma la información consolidada en el paso 2 (Experian, D1 y biometría) y la evalúa de forma automática contra los criterios de riesgo configurados para el producto. Este paso fue ajustado en junio de 2026 para incorporar la comparación automática entre la tienda habitual declarada y la registrada en D1.
+**Proceso:** El motor de reglas toma la información consolidada en el paso 2 (Experian, D1 y biometría) y la evalúa de forma automática contra los criterios de riesgo configurados para el producto. Este paso fue ajustado en junio de 2026 para incorporar la comparación automática entre la tienda habitual declarada y la registrada en D1. En octubre de 2026 se precisó la regla de score Colpatria para NIT: empresa o representante legal (mínimo PN), no solo el score empresarial.
 
 **Resultado:** El sistema aplica automáticamente las reglas de Colpatria definidas para el proceso de estudio de crédito y determina si el cliente cumple o no los criterios.
 
@@ -199,8 +199,8 @@ La cuenta bancaria informada por el cliente se registra también en Druo para ha
 
 - El proceso KYC se ejecuta de forma automática, con un punto de control manual para los casos de posible rechazo.
 - La consulta a Experian (Historia de Crédito y servicio Reconocer) y al historial transaccional de D1 es obligatoria; el resultado se almacena en el Admin junto con el resultado de la biometría del onboarding.
-- El cliente debe cumplir el puntaje mínimo definido para el producto*.
-- Se evalúa automáticamente la capacidad de endeudamiento del cliente*.
+- El cliente debe cumplir el puntaje mínimo definido para el producto*. Persona natural (CC/CE): score HPN del titular ≥ mínimo PN. Persona jurídica (NIT): aprueba el check de score si el score de la empresa ≥ mínimo PJ **o** el score HPN del representante legal ≥ mínimo PN (según toggles activos); si ambos cumplen, prevalece el de la empresa. En Admin se muestran ambos scores y con cuál se aprobó.
+- Se evalúa automáticamente la capacidad de endeudamiento del cliente*. Para NIT, capacidad y mora se evalúan sobre el sujeto empresa (PJ) cuando hay datos de empresa.
 - La localidad habitual declarada por el cliente se compara automáticamente contra la tienda habitual registrada en el histórico transaccional de D1*.
 - La evaluación de criterios de KYC se realiza mediante las reglas de Colpatria*.
 - La cuenta bancaria debe coincidir con los productos financieros reportados en Experian*.
@@ -235,7 +235,7 @@ La cuenta bancaria informada por el cliente se registra también en Druo para ha
 
 ## Excepciones
 
-- El cliente no cumple el puntaje mínimo requerido.
+- El cliente no cumple el puntaje mínimo requerido (en NIT: ni el score de la empresa ni el del representante legal alcanzan su mínimo, según toggles activos).
 - La capacidad de endeudamiento supera los límites permitidos.
 - La tienda habitual declarada no coincide con la registrada en el histórico transaccional.
 - La información consultada en Experian presenta inconsistencias.
