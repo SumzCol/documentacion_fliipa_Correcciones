@@ -38,7 +38,7 @@ Los valores de `minInstances`/`maxInstances`/`concurrency`/CPU/memoria salen de 
 | Custodia de DNS + *cutover* de Webflow | Pendiente de decisión de negocio | No |
 | Load Balancer + NEGs + certificados + DNS → IP del LB | No creado | No (sí para `fliipa.com`, ver [Dominio y Load Balancer](05 Dominio y Load Balancer.md)) |
 | `DEPLOY_PHASE=F` + rebuild de frontends | No activado (`DEPLOY_PHASE=1`) | No |
-| Secretos reales de Experian / Score | *Placeholders* (`__REPLACE_BEFORE_GO_LIVE__`) en `b2b` | No, pero bloquea el uso real de esos proveedores |
+| Secretos reales de Experian / Score | Cargados en Secret Manager de PROD; literales de producción en `serviceEnvLiterals.b2b` y demo/UAT en `serviceEnvLiteralsDev.b2b` | No. La revisión de `b2b` los usa al redesplegar |
 | Registro de webhooks de terceros con el dominio final | Pendiente hasta el *cutover* de dominio | No |
 | Jobs batch reales | Solo existe el job de referencia `example-ping`, con dos schedulers de ejemplo | No |
 
@@ -46,7 +46,7 @@ Los valores de `minInstances`/`maxInstances`/`concurrency`/CPU/memoria salen de 
 
 - ¿Quién tiene el panel de gestión de `fliipa.com`?
 - ¿Se reemplaza Webflow o se redirige a `/checkout`?
-- ¿Cuándo y con qué credenciales reales se activan Experian / Score en `b2b`?
+- Experian / Score en PROD ya tiene credenciales reales en Secret Manager y hosts de producción en literales. STG sigue en demo/UAT. Falta redesplegar `b2b` para que la revisión en Cloud Run los monte.
 - ¿Qué jobs batch reales (más allá de `example-ping`) se necesitan y con qué periodicidad?
 
 ## Riesgos a vigilar
@@ -54,4 +54,4 @@ Los valores de `minInstances`/`maxInstances`/`concurrency`/CPU/memoria salen de 
 - **Renovación de dominio** `fliipa.com`: alerta WHOIS estimada ~2026-09-25; sin renovación, cualquier plan de *cutover* queda bloqueado.
 - **Mezcla de entornos**: los scripts verifican `matrix.projectId == PROJECT_ID` antes de operar, pero cualquier cambio manual de contexto (por ejemplo, exportar `PROJECT_ID` a mano) podría saltarse esa protección; seguir siempre los wrappers (`pdeploy-prod.sh`, `deploy-dev.sh`) en lugar de `gcloud` directo.
 - **Capacidad de Cloud SQL en STG**: al ser `db-f1-micro` (~25 conexiones), *pool sizes* copiados de PROD (15–20) agotarían las conexiones disponibles; mantener `DB_POOL_MAX=2–3` en STG.
-- **Secretos no obligatorios con `required: false`** (Experian/Score): al no ser bloqueantes para el despliegue, existe el riesgo de que la plataforma opere en producción con integraciones de score/verificación de identidad aún no configuradas con credenciales reales.
+- **Secretos no obligatorios con `required: false`** (Experian/Score): no bloquean el despliegue. En PROD las credenciales reales ya están en Secret Manager; STG conserva las de demo/UAT. Si se despliega `b2b` sin redesplegar después de rotar un secreto, la revisión vieja sigue con el valor anterior.
