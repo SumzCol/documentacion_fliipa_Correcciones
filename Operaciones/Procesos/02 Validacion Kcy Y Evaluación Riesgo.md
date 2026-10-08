@@ -39,11 +39,11 @@ La cuenta bancaria ingresada por el cliente también se registra en Druo para ha
 
 **Información utilizada:** Solicitud finalizada durante el onboarding digital.
 
-**Proceso:** Al cerrarse exitosamente el onboarding, el sistema dispara el motor de riesgo de forma inmediata, sin esperar respuesta de Druo, y adicionalmente lanza una alerta al canal de Slack de operaciones, cubriendo la llegada de nuevos clientes, aprobaciones, rechazos y alertas de fraude, sin que el cliente deba realizar ninguna acción adicional.
+**Proceso:** Al cerrarse el onboarding, el crédito queda en solicitado y el cliente recibe la confirmación sin esperar a Experian. La evaluación KYC corre en un pedido aparte (Cloud Tasks): un solo intento, como máximo 10 a la vez. Si no termina en 50 segundos se cierra como fallo de tiempo y la línea sigue en solicitado. No es un rechazo por reglas. Reevaluar desde el panel es el único segundo intento. El registro en Druo sigue en paralelo y no frena este disparo. Slack avisa a operaciones de la llegada, de la aprobación, del rechazo por reglas y de los fallos de servicio.
 
-**Resultado:** El sistema recibe la solicitud y abre automáticamente el caso dentro del Admin. A partir de este momento inicia el proceso de KYC.
+**Resultado:** El caso queda abierto en el Admin. En el panel el motivo distingue tres fallos que dejan la línea en solicitado: Experian no respondió, la evaluación no terminó (corte de 50 segundos o un intento que quedó muerto) y fallo de servicio (cuenta, motor de reglas o el sistema de crédito). Si el proceso se apaga antes de guardar ese cierre, el caso sigue en curso hasta que alguien reevalúa.
 
-**Tiempo estimado:** Instantáneo (disparado automáticamente al cierre del onboarding).
+**Tiempo estimado:** El cliente no espera la evaluación. El intento de KYC tiene un tope de 50 segundos.
 
 ---
 
