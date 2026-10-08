@@ -55,7 +55,7 @@ La cuenta bancaria ingresada por el cliente también se registra en Druo para ha
 
 **Información utilizada:** Información del cliente registrada durante el onboarding.
 
-**Proceso:** El sistema ejecuta, en el caso abierto en el Admin, las consultas correspondientes a Experian incluyendo el historial de crédito para personas, y el servicio Reconocer para contrastar los datos de contacto y el histórico transaccional de D1 del cliente. Cada resultado se almacena como parte del expediente del caso. Adicionalmente, el resultado de la validación biométrica obtenida durante el onboarding con el proveedor externo (Olimpia)* se registra en el Admin como un insumo más del expediente, sin volver a ejecutarse en esta etapa.
+**Proceso:** El sistema ejecuta, en el caso abierto en el Admin, las consultas correspondientes a Experian incluyendo el historial de crédito para personas, y el servicio Reconocer para contrastar los datos de contacto y el histórico transaccional de D1 del cliente. Cada resultado se almacena como parte del expediente del caso. Reconocer valida el nombre (`validarNombre=true`): si el documento es CC o CE envía el primer apellido del titular (`primerApellidoBuscar`); si es NIT envía el literal `NIT`. Sin primer apellido en CC/CE la consulta no sale y responde error 400. Adicionalmente, el resultado de la validación biométrica obtenida durante el onboarding con el proveedor externo (Olimpia)* se registra en el Admin como un insumo más del expediente, sin volver a ejecutarse en esta etapa.
 
 La cuenta bancaria informada por el cliente se registra también en Druo para habilitar futuros débitos; este registro es paralelo al expediente de KYC y no sustituye la validación contra Experian del Paso 5.
 
