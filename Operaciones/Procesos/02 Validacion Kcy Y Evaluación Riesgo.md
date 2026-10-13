@@ -78,9 +78,9 @@ La cuenta bancaria informada por el cliente se registra también en Druo para ha
 - Representante legal / identidad. El match es por tipo y número de documento; el nombre se muestra y no decide. **Persona natural (CC/CE):** se compara el documento ingresado contra Reconocer del titular. **Persona jurídica (NIT):** si la cámara de comercio embebida en Historia de Crédito PJ (HPJ) trae representante, se compara ese documento contra el representante ingresado. Si no coincide, la regla falla. Si la cámara no trae representante, se usa el Reconocer de la cédula del representante, consultado al inicio junto con HPJ (no hay una segunda consulta). Advance no aporta el representante. Si ninguna de esas fuentes trae documento, no hay persona de Experian para comparar.
 - Datos de contacto reportados mediante el servicio Reconocer de Experian vs. datos de contacto reportados durante el proceso de onboarding.
 - Localidad habitual declarada por el cliente durante el onboarding, comparada de forma automática contra la tienda habitual registrada en el histórico transaccional de D1*.
-- Comparación de la cuenta bancaria ingresada por el cliente vs. el servicio "Historia de Crédito" de Experian.
+- Comparación de la cuenta bancaria ingresada por el cliente vs. Historia de Crédito de Experian: la cadena de dígitos que reporta Experian debe aparecer seguida dentro del número del cliente.
 
-**Proceso:** El motor de reglas toma la información consolidada en el paso 2 (Experian, D1 y biometría) y la evalúa de forma automática contra los criterios de riesgo configurados para el producto. Este paso fue ajustado en junio de 2026 para incorporar la comparación automática entre la tienda habitual declarada y la registrada en D1. En octubre de 2026 se precisó la regla de score Colpatria para NIT: empresa o representante legal (mínimo PN), no solo el score empresarial. El mismo mes se precisó la identidad del NIT: cámara de HPJ primero y, si no trae representante, Reconocer de la cédula ya consultada; Advance no se usa como representante.
+**Proceso:** El motor de reglas toma la información consolidada en el paso 2 (Experian, D1 y biometría) y la evalúa de forma automática contra los criterios de riesgo configurados para el producto. Este paso fue ajustado en junio de 2026 para incorporar la comparación automática entre la tienda habitual declarada y la registrada en D1. En octubre de 2026 se precisó la regla de score Colpatria para NIT: empresa o representante legal (mínimo PN), no solo el score empresarial. El mismo mes se precisó la identidad del NIT: cámara de HPJ primero y, si no trae representante, Reconocer de la cédula ya consultada; Advance no se usa como representante. También se precisó la cuenta: los dígitos que trae Experian (el largo que venga en la consulta) deben aparecer seguidos dentro del número que ingresó el cliente.
 
 **Resultado:** El sistema aplica automáticamente las reglas de Colpatria definidas para el proceso de estudio de crédito y determina si el cliente cumple o no los criterios.
 
@@ -113,13 +113,11 @@ La cuenta bancaria informada por el cliente se registra también en Druo para ha
 
 **Información utilizada:** Cuenta bancaria registrada durante el onboarding; productos financieros reportados en Experian.
 
-**Proceso:** El sistema contrasta la cuenta bancaria registrada por el cliente (entidad + número de cuenta, capturados en el onboarding) contra los productos financieros que Experian reporta a nombre del mismo cliente, con el fin de confirmar que la cuenta le pertenece y que la información es consistente antes de continuar con la originación del crédito. A diferencia del modelo B2C, este modelo refuerza la seguridad contrastando contra Experian en lugar de basarse únicamente en el resultado de open banking. Si Druo reporta una discrepancia o falla sobre la titularidad de la cuenta, se realiza una conciliación interna verificando la información contra lo reportado en Experian.
+**Proceso:** El sistema contrasta el número de cuenta que ingresó el cliente contra las cuentas de Historia de Crédito de Experian. La regla pasa cuando la cadena completa de dígitos que reporta Experian (el largo que venga en la consulta) aparece seguida dentro del número del cliente, al inicio, en el medio o al final. Persona natural (CC/CE): cuentas del HPN del titular. Persona jurídica (NIT): cuentas del HPJ de la empresa y, si ninguna coincide, las del HPN del representante. El cruce confirma que la cuenta le pertenece antes de continuar con la originación del crédito. A diferencia del modelo B2C, este modelo refuerza la seguridad contrastando contra Experian en lugar de basarse únicamente en el resultado de open banking. Si Druo reporta una discrepancia o falla sobre la titularidad de la cuenta, se realiza una conciliación interna verificando la información contra lo reportado en Experian.
 
 **Resultado:** Confirmación de que la cuenta bancaria corresponde al cliente evaluado.
 
 **Tiempo estimado:** Automático.
-
-> **Placeholder\*:** no está definido el detalle exacto de qué campos de "productos financieros reportados en Experian" se usan para el cruce (¿tipo de producto, titularidad, antigüedad?) ni el criterio de coincidencia mínima aceptado. Pendiente de definición técnica.
 
 ---
 
@@ -204,7 +202,7 @@ La cuenta bancaria informada por el cliente se registra también en Druo para ha
 - Se evalúa automáticamente la capacidad de endeudamiento del cliente*. Para NIT, capacidad y mora se evalúan sobre el sujeto empresa (PJ) cuando hay datos de empresa.
 - La localidad habitual declarada por el cliente se compara automáticamente contra la tienda habitual registrada en el histórico transaccional de D1*.
 - La evaluación de criterios de KYC se realiza mediante las reglas de Colpatria*.
-- La cuenta bancaria debe coincidir con los productos financieros reportados en Experian*.
+- La cuenta bancaria es válida cuando los dígitos que Experian reporta para esa cuenta aparecen como un tramo continuo dentro del número ingresado por el cliente.
 - Si el cliente no cumple los requisitos o la cuenta bancaria no es válida, la solicitud pasa a estado de "posible rechazo" y requiere confirmación manual del equipo de operaciones antes del rechazo definitivo.
 - Toda alerta relevante del proceso (llegada de solicitud, aprobación, posible rechazo/rechazo, alerta de fraude) se notifica en tiempo real por el canal de Slack de operaciones.
 - Solo las solicitudes aprobadas continúan hacia la firma del contrato.
@@ -241,7 +239,7 @@ La cuenta bancaria informada por el cliente se registra también en Druo para ha
 - La tienda habitual declarada no coincide con la registrada en el histórico transaccional.
 - La información consultada en Experian presenta inconsistencias.
 - Druo reporta una discrepancia o falla sobre la titularidad de la cuenta bancaria (se resuelve mediante conciliación interna contra Experian).
-- La cuenta bancaria registrada no coincide con la información validada en Experian.
+- Los dígitos de la cuenta reportada por Experian no aparecen como tramo continuo dentro del número ingresado por el cliente.
 - Error durante la consulta a Experian o al historial transaccional de D1.
 - Error en la ejecución de las reglas automáticas de Colpatria del proceso KYC.
 
@@ -266,7 +264,6 @@ La cuenta bancaria informada por el cliente se registra también en Druo para ha
 > - Validar si existen criterios complementarios no reflejados en el journey. *(placeholder — paso 3)*
 > - Confirmar cómo se define y mide la comparación entre "tienda habitual declarada" y "tienda habitual registrada" (coincidencia exacta, radio geográfico, tolerancia). *(placeholder — paso 3)*
 > - Confirmar el valor del score mínimo y la fórmula/límites de la capacidad de endeudamiento. *(placeholder — paso 3)*
-> - Confirmar qué campos específicos de "productos financieros reportados en Experian" se usan para validar la cuenta bancaria y el criterio de coincidencia mínima. *(placeholder — paso 5)*
 > - Definir el SLA y los criterios operativos para la revisión manual del estado de "posible rechazo" antes de confirmar el rechazo definitivo. *(placeholder — paso 7)*
 > - Confirmar el copy/contenido exacto de la notificación de rechazo y si existe algún canal adicional al correo (SMS/WhatsApp). *(placeholder — paso 10)*
 
