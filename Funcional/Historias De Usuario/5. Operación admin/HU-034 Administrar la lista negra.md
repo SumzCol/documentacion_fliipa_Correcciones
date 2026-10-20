@@ -3,15 +3,15 @@
 | Campo | Detalle |
 |:---:|:---:|
 | **Actor** | Administrador del producto |
-| **Historia** | Como administrador, quiero agregar o retirar clientes de la lista negra |
+| **Historia** | Como administrador, quiero agregar o retirar un documento de la lista negra, exista o no un cliente |
 | **Prioridad** | Media |
-| **Criterios de aceptación** | El administrador agrega o retira clientes de la blacklist, validando que el cliente exista y registrando el motivo por el cual el cliente ingresa a la lista negra. |
+| **Criterios de aceptación** | El administrador agrega un documento a la lista negra sin exigir que la persona exista como cliente. El motivo es obligatorio (mínimo 10 caracteres) y queda registrado quién lo hizo. Si hay un único cliente b2b con ese documento, el registro se vincula a ese cliente; si no hay, queda solo el documento. Desde la ficha de un cliente existente también se puede agregar o retirar. |
 | **Relaciones** | Casos de uso: [CU-017](../../Casos de Uso/6. Operaci�n Admin/CU-017 Administrar y consultar clientes en blacklist.md). Requerimiento:[RF-027](../../Requerimientos/Requerimientos Funcionales.md). Historia relacionada: [HU-011](../3. Credito/HU-011 Ver mensaje de no disponibilidad de cr�dito.md)  |
-| **Referencias** | `backends/b2b/src/controllers/blacklist/add-client-to-blacklist.ts`, `backends/b2b/src/controllers/blacklist/remove-client-client-from-blacklist.ts` |
+| **Referencias** | `backends/b2b/src/services/client-blacklist.service.ts`, `apps/admin/src/app/product/blacklist/page.tsx` |
  **Autor** | María Fernanda Herazo |
 | **Fecha** | 18/08/2026 |
-| **Versión** | V.1.7 |
-| **Comentarios** | **Corrección v1.6**: se agrega al criterio de aceptación el registro del motivo de ingreso a la blacklist, que hacía falta. Pendiente de verificar en código si el modelo actual de blacklist tiene un campo de motivo o si debe agregarse. A diferencia de HU-031/032/033/036, esta historia sí tenía respaldo real desde la v1.3, pero en `backends/b2b` — no en un backend administrativo separado. Se confirma el hallazgo original: no hay enforcement de la blacklist sobre checkout, evaluación de riesgo o desembolso en ningún archivo del repositorio (`blacklists` solo aparece como relación de lectura en `get-client-by-id.service.ts`, sin ninguna validación bloqueante). Este es un riesgo de negocio real y verificado. |
+| **Versión** | V.1.8 |
+| **Comentarios** | **Corrección v1.6**: se agrega al criterio de aceptación el registro del motivo de ingreso a la blacklist, que hacía falta. El motivo y quién lo agregó quedaron en el modelo. **Corrección 2026-10-20:** la clave de la lista negra es el número de documento; el cliente es opcional. Un documento listado no entra por la landing, no inicia onboarding y no entra al portal de redemption, aunque no exista en b2b, core ni rules-engine. La persona ve un mensaje genérico para contactar a Fliipa. La alerta operativa indica que no continuó el onboarding porque el documento está en la lista negra e incluye el motivo. |
 
 
 

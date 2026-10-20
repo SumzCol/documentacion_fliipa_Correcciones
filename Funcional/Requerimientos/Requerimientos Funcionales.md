@@ -126,7 +126,7 @@ Cubre los 11 procesos de negocio definidos en [Alcance del Producto](../../Produ
 |----|--------|--------------|-----------|-----------|--------|--------|
 | RF-025 | Registro de notas de cobranza | Permitir registrar notas de cobranza por cliente, incluyendo canal, dirección del contacto, resultado y monto de compromiso de pago. | Analista de cartera | Alta | Implementado; no descrito de forma explícita en el alcance de producto — se recomienda incorporarlo. | `backends/b2b/src/controllers/clients/collection-notes.ts` |
 | RF-026 | Resumen de atención de cobranza | Permitir consultar un resumen de atención de cobranza por cliente, como insumo para el Comité de Cartera. | Analista de cartera, Comité de Cartera | Media | Implementado | `collection-notes.ts` (`getCollectionNotesAttentionSummary`) |
-| RF-027 | Enforcement de blacklist | Restringir o bloquear operaciones (checkout, riesgo, desembolso) de clientes incluidos en la lista negra. | Sistema (automático) | Alta | Hallazgo: el catálogo existe (agregar/quitar cliente), pero no se encontró ningún punto donde se consulte antes de aprobar checkout, riesgo o desembolso. | `backends/b2b/src/controllers/blacklist/*.ts` |
+| RF-027 | Enforcement de blacklist | Restringir el acceso a la plataforma por número de documento, exista o no un cliente. | Sistema (automático) | Alta | Implementado en la landing, en la creación del checkout y en el login de redemption. El mensaje a la persona no menciona la lista negra. La alerta operativa sí indica el motivo. No bloquea por sí solo la evaluación de riesgo ni el desembolso. | `backends/b2b/src/services/client-blacklist.service.ts` |
 
 ### Servicio al cliente
 
