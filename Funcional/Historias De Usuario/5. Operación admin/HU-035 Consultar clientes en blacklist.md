@@ -3,15 +3,15 @@
 | Campo | Detalle |
 |:---:|:---:|
 | **Actor** | Administrador del producto |
-| **Historia** | Como administrador, quiero consultar el listado de clientes en blacklist y gestionar sus ingresos y salidas, para identificar a quién no se le debe ofrecer ningún producto o beneficio. |
+| **Historia** | Como administrador, quiero consultar los documentos en lista negra y gestionar sus altas y bajas, para impedir el acceso aunque la persona no exista como cliente. |
 | **Prioridad** | Baja |
-| **Criterios de aceptación** | El administrador puede consultar desde el panel administrativo el listado de clientes registrados en blacklist, incluyendo el motivo de ingreso registrado en HU-034.  |
+| **Criterios de aceptación** | El administrador consulta en Producto → Lista negra el documento, el motivo, la fecha y quién lo agregó. Puede dar de alta un documento sin cliente y quitarlo. Si el registro está vinculado a un cliente, el nombre enlaza a su ficha.  |
 | **Relaciones** | Casos de uso: [CU-017](../../Casos de Uso/6. Operaci�n Admin/CU-017 Administrar y consultar clientes en blacklist.md). Historia relacionada: [HU-034](../5. Operaci�n admin/HU-034 Administrar la lista negra.md) . |
-| **Referencias** | Pendiente de verificar en código la existencia de un endpoint y una pantalla para consultar y gestionar el listado completo de blacklist. |
+| **Referencias** | `apps/admin/src/app/product/blacklist/page.tsx`, `backends/admin/src/controllers/product-blacklist.controller.ts` |
  **Autor** | María Fernanda Herazo |
 | **Fecha** | 18/08/2026 |
-| **Versión** | V.1.7 |
-| **Estado en plataforma** | **Pendiente de implementar.** |
-| **Comentarios** | **Historia agregada en la v1.6.** Actualmente no existe en el panel administrativo una blacklist consultable ni una funcionalidad para gestionar manualmente los ingresos y salidas de clientes. La blacklist existe únicamente a nivel de servicio técnico, con operaciones individuales de agregar y retirar clientes. Queda pendiente implementar la consulta y gestión manual de la blacklist en el admin, en alineación con HU-034. |
+| **Versión** | V.1.8 |
+| **Estado en plataforma** | **Implementado.** |
+| **Comentarios** | **Corrección 2026-10-20:** la pantalla Producto → Lista negra está disponible. El listado es por documento. No hace falta que la persona exista en la plataforma para incluirla o para que el bloqueo aplique. |
 
 
