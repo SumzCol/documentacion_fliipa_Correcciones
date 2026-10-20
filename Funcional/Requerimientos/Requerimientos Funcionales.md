@@ -3,10 +3,10 @@
 | Documento | Requerimientos Funcionales |
 |-----------|------------------------------|
 | **Proyecto** | Fliipa |
-| **Versión** | 1.1 |
+| **Versión** | 1.8 |
 | **Estado** | En revisión |
 | **Responsable** | Producto, negocio y QA |
-| **Última actualización** | 2026-07-10 |
+| **Última actualización** | 2026-10-20 |
 
 ---
 
@@ -24,6 +24,7 @@
 | 1.6 | 2026-09-09 | Equipo técnico | Se actualiza RF-014: el correo de copia firmada usa la plantilla Sendgrid *B2B - Firma de contrato* (catálogo `contract` en communications) y sigue adjuntando el PDF. |
 | 1.7 | 2026-09-09 | Equipo técnico | RF-014: post-firma también notifica por WhatsApp (`contractSigned`). Aprobación KYC: correo `welcome` + WhatsApp `creditApproved`. |
 | 1.7 | 2026-09-09 | Equipo técnico | Se corrige RF-013 y RF-006: la firma del contrato **sí se realiza con OTP** (mecanismo vigente en código). Se revierte la nota de ago-2026 que la describía como proveedor externo. |
+| 1.8 | 2026-10-20 | Equipo técnico | RF-005 / RF-032: preaprobación B2B usa reglas duras `PCT_EFECTIVO` y `CUPO_REAL` (no `CUPO_CALCULADO`) con toggles y umbrales en `product_settings.b2b_preapproval_config`; el cupo asignado al core es el `CUPO_REAL` de la observación. |
 
 ---
 
@@ -65,7 +66,7 @@ Cubre los 11 procesos de negocio definidos en [Alcance del Producto](../../Produ
 | RF-002 | Creación de solicitud (checkout) | Crear una solicitud a partir de documento y tipo de documento, reutilizando la solicitud existente en estado `REQUEST_STARTED` si el cliente aún no la ha completado. | Cliente empresarial | Alta | Implementado | `backends/b2b/src/controllers/checkouts/create-checkout.ts` |
 | RF-003 | Prevención de solicitudes duplicadas | Impedir que un mismo documento inicie más de una solicitud si ya existe un cliente registrado con ese documento. | Sistema (automático) | Alta | Implementado | `checkouts/create-checkout.ts` |
 | RF-004 | Actualización incremental del checkout | Permitir actualizar los datos del checkout (negocio, ubicación, representante legal, cuenta bancaria) de forma incremental, en varios pasos. | Cliente empresarial | Alta | Implementado | `checkouts/update-checkout.ts` |
-| RF-005 | Cálculo del cupo preaprobado | Calcular y mostrar al cliente el cupo preaprobado con base en criterios de consumo histórico en D1. | Sistema (automático) | Alta | Implementado: el motor de reglas calcula un cupo sugerido a partir de `total_compras`, `num_compras` y `num_tiendas` del histórico D1, con multiplicadores según el volumen de compras. | `services/product/rules-engine/src/utils/get-suggested-credit.ts`, `services/product/rules-engine/src/rule-models/b2b-base-preapproval.ts` |
+| RF-005 | Cálculo del cupo preaprobado | Calcular y mostrar al cliente el cupo preaprobado con base en criterios de consumo histórico en D1. | Sistema (automático) | Alta | Implementado: el motor B2B (`B2B_PREAPPROVAL`) aplica reglas duras configurables sobre `PCT_EFECTIVO` y `CUPO_REAL` (toggles + umbrales en `b2b_preapproval_config`). El cupo que se asigna / muestra como preaprobado es el **cupo real** (`CUPO_REAL`) de la observación cargada, no `CUPO_CALCULADO`. Settings legacy con `minCupoCalculado` se resuelven como `minCupoReal`. | `services/rules-engine/src/models/b2b-preapproval/index.ts`, `packages/kernel/src/common/settings/get-b2b-preapproval-setting.ts`, `backends/b2b/src/db/seeds/product-settings.seed.ts` |
 
 ### Validación de identidad
 
@@ -140,7 +141,7 @@ Cubre los 11 procesos de negocio definidos en [Alcance del Producto](../../Produ
 |----|--------|--------------|-----------|-----------|--------|--------|
 | RF-030 | Consulta de clientes y auditoría | Permitir buscar y consultar clientes por documento, incluyendo su historial de operaciones auditadas (línea de crédito, desembolsos, pagos), limitado a 500 filas. | Administrador del producto | Media | Implementado | `backends/admin/src/controllers/clients.controller.ts` (`getClientAuditedOperations`) |
 | RF-031 | Registro de auditoría genérico | Registrar en un log de auditoría (`audit_log`) toda inserción, actualización o eliminación sobre las tablas de negocio del core, incluyendo el usuario que ejecuta el cambio. | Sistema (automático) | Alta | Implementado; funcionalidad clave para cumplimiento no mencionada en el alcance MVP conocido — se recomienda documentarla formalmente. | `runAuditedTransaction` (paquete `kernel`) |
-| RF-032 | Administración de parámetros del producto | Permitir administrar parámetros configurables desde un panel restringido a administradores. Hay **dos almacenes**: (1) **Core** — `fliipa_banking_core.settings` (plan de pagos, tasas, cortes, cargos, fees); API `GET/PUT /settings`. (2) **Producto** — `fliipa_b2b.product_settings` (funnel de checkout, mocks de terceros, KYC Colpatria, preaprobación B2B, allowlist de documentos); API `GET/PUT /product/settings` (admin-back → b2b S2S). El panel separa pestañas Core / Producto / KYC / Preaprobación. | Administrador del producto | Media | Implementado | `backends/admin/src/controllers/settings.controller.ts`, `backends/admin/src/controllers/product-settings.controller.ts`, `backends/b2b/src/controllers/internal/product-settings.ts`, `apps/admin/src/app/settings/page.tsx` |
+| RF-032 | Administración de parámetros del producto | Permitir administrar parámetros configurables desde un panel restringido a administradores. Hay **dos almacenes**: (1) **Core** — `fliipa_banking_core.settings` (plan de pagos, tasas, cortes, cargos, fees); API `GET/PUT /settings`. (2) **Producto** — `fliipa_b2b.product_settings` (funnel de checkout, mocks de terceros, KYC Colpatria, preaprobación B2B, allowlist de documentos); API `GET/PUT /product/settings` (admin-back → b2b S2S). El panel separa pestañas Core / Producto / KYC / Preaprobación. En **Preaprobación**, cada regla dura (`PCT_EFECTIVO`, `CUPO_REAL`) tiene toggle de evaluación y umbral; el cupo asignado al enviar al core es `CUPO_REAL`. | Administrador del producto | Media | Implementado | `backends/admin/src/controllers/settings.controller.ts`, `backends/admin/src/controllers/product-settings.controller.ts`, `backends/b2b/src/controllers/internal/product-settings.ts`, `apps/admin/src/app/settings/page.tsx` |
 | RF-033 | Monitoreo del sistema | Permitir monitorear el estado del core bancario, la base de datos y servicios externos desde el portal administrativo, restringido a roles de sistema. | Administrador con rol de sistema | Media | Implementado parcialmente: el monitoreo de "terceros" cubre GitHub, npm y GCP, pero no los proveedores de negocio (Experian, Druo, biometría, Zenvia/Sendgrid, core bancario). | `system-core-health.controller.ts`, `system-cloud-sql.controller.ts`, `system-third-party-status.controller.ts` |
 
 ### Funcionalidades detectadas en el código sin requerimiento de negocio documentado

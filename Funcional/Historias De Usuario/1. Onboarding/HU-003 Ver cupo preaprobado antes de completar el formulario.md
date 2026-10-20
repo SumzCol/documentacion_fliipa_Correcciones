@@ -10,6 +10,6 @@
 | **Autor** | María Fernanda Herazo |
 | **Fecha** | 18/08/2026 |
 | **Versión** | V.1.7 |
-| **Comentarios** | **Confirmado en plataforma:** la preaprobación y el cupo sugerido están operativos en el motor de riesgo. La plataforma permite cargar los clientes preaprobados mediante archivo, consultar/procesar la información de preaprobación y obtener el cupo sugerido utilizado en el flujo. Por tanto, esta funcionalidad no corresponde únicamente a un diseño documental, sino que cuenta con soporte operativo en el motor de riesgo. |
+| **Comentarios** | **Confirmado en plataforma:** la preaprobación y el cupo están operativos en el motor de riesgo. Tras la carga del archivo, las reglas duras evaluables son `PCT_EFECTIVO` y `CUPO_REAL` (configurables en settings de producto); el valor de cupo preaprobado / asignado corresponde a **cupo real** (`CUPO_REAL`), no a `CUPO_CALCULADO`. |
 
 
