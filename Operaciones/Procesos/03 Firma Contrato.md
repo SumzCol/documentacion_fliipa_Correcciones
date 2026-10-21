@@ -28,7 +28,7 @@ En el journey, las cajas moradas ("Lee el contrato", "Se genera contrato firmado
 
 ## Descripción general
 
-Una vez el crédito ha sido aprobado durante la evaluación de riesgo, el Core Bancario habilita la operación para iniciar el proceso de firma electrónica. El cliente recibe una invitación para continuar con la firma, autentica su identidad mediante su Documento de Identificación y el PIN de seguridad creado durante el onboarding, y accede a una pantalla de bienvenida con la información general del crédito aprobado, incluyendo el cupo aprobado, el plan de pagos, la fecha de pago, la tasa de interés y la disponibilidad del cupo para su uso en tiendas D1. Después de aceptar las condiciones, el cliente visualiza el detalle completo del crédito (cupo, plan de pagos, valor, fecha, tasa e inicio de uso), revisa el contrato v4 (carátula diligenciada; tabla de aceptación y Anexo 1 en blanco en preview) y confirma la firma mediante un código OTP enviado por WhatsApp a su celular registrado.
+Una vez el crédito ha sido aprobado durante la evaluación de riesgo, el Core Bancario habilita la operación para iniciar el proceso de firma electrónica. El cliente recibe una invitación para continuar con la firma, autentica su identidad mediante su Documento de Identificación y el PIN de seguridad creado durante el onboarding, y accede a una pantalla de bienvenida con la información general del crédito aprobado, incluyendo el cupo aprobado, el plan de pagos, la fecha de pago, la tasa de interés y la disponibilidad del cupo para su uso en tiendas D1. Después de aceptar las condiciones, el cliente visualiza el detalle completo del crédito (cupo, plan de pagos, valor, fecha, tasa e inicio de uso), revisa el contrato v4 (carátula diligenciada; tabla de aceptación en blanco en preview) y confirma la firma mediante un código OTP enviado por WhatsApp a su celular registrado.
 
 Cuando la firma se completa correctamente, el sistema genera el PDF del contrato firmado (con evidencia de aceptación: IP, fecha/hora y OTP) y envía una copia al correo electrónico del cliente. Posteriormente, se genera la compra del bono con D1, D1 emite el bono y lo entrega al equipo de operaciones, quien lo asigna al cliente. Una vez completada la asignación, el sistema notifica al cliente que ya puede visualizar el código del bono desde su cuenta. Finalmente, un actor distinto al Core Bancario —Core de Crédito/Originación— aprueba el crédito, lo que da inicio al funcionamiento de la calculadora y permite continuar con la recepción y uso del bono.
 
@@ -173,7 +173,7 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 
 **Actor:** Cliente.
 
-**Proceso:** El cliente lee el **Contrato de Cupo Rotativo de Crédito Popular Productivo Urbano (versión 4)** desplegado en la plataforma (redemption) antes de continuar hacia la verificación de la firma electrónica. El texto se genera en servidor (`b2b`) y se muestra en previsualización con la **Parte I — Carátula** diligenciada (datos del cliente, cupo/`lineCap`, tasa E.A. y cargo de administración tomados de la calculadora/settings; aliado comercial = nombre del negocio; vencimiento del cupo = fecha de previsualización + 12 meses). La **tabla de registros de aceptación** (IP, fecha/hora, OTP) y el **Anexo 1** (resumen por desembolso) permanecen en blanco en esta previsualización.
+**Proceso:** El cliente lee el **Contrato de Cupo Rotativo de Crédito Popular Productivo Urbano (versión 4)** desplegado en la plataforma (redemption) antes de continuar hacia la verificación de la firma electrónica. El texto se genera en servidor (`b2b`) y se muestra en previsualización con la **Parte I — Carátula** diligenciada (datos del cliente, cupo/`lineCap`, tasa E.A. y cargo de administración tomados de la calculadora/settings; aliado comercial = nombre del negocio; vencimiento del cupo = fecha de previsualización + 12 meses). La **tabla de registros de aceptación** (IP, fecha/hora, OTP) permanece en blanco en esta previsualización. El contrato **no incluye Anexo 1**.
 
 **Resultado:** Contrato revisado por el cliente.
 
@@ -236,7 +236,7 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 
 **Actor:** Web (sistema).
 
-**Proceso:** Una vez validado el código, el sistema reconstruye el snapshot del **contrato v4** en modo firmado (misma carátula que la previsualización, con vencimiento del cupo anclado a la fecha real de firma + 12 meses) y **llena la tabla de registros de aceptación** con IP, fecha/hora (Bogotá) y OTP. El **Anexo 1** permanece en blanco en este envío (se usa por desembolso, no en la firma del cupo). El PDF se genera con jsPDF (logo + tipografía multipágina) y se notifica al cliente por dos canales: (1) correo con la plantilla Sendgrid *B2B - Firma de contrato* (`contract`), personalizado con el nombre del cliente y con el PDF firmado adjunto; (2) WhatsApp con la plantilla Zenvia `contractSigned` (sin adjunto; el PDF viaja solo por correo). Ambos envíos son fail-open respecto de la firma.
+**Proceso:** Una vez validado el código, el sistema reconstruye el snapshot del **contrato v4** en modo firmado (misma carátula que la previsualización, con vencimiento del cupo anclado a la fecha real de firma + 12 meses) y **llena la tabla de registros de aceptación** con IP, fecha/hora (Bogotá) y OTP. El PDF se genera con jsPDF (logo + tipografía multipágina; tablas de carátula estilo Word) y se notifica al cliente por dos canales: (1) correo con la plantilla Sendgrid *B2B - Firma de contrato* (`contract`), personalizado con el nombre del cliente y con el PDF firmado adjunto; (2) WhatsApp con la plantilla Zenvia `contractSigned` (sin adjunto; el PDF viaja solo por correo). Ambos envíos son fail-open respecto de la firma. El documento firmado **no incluye Anexo 1**.
 
 **Resultado:** Contrato firmado electrónicamente, con copia PDF por correo y aviso por WhatsApp.
 
@@ -246,7 +246,7 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 
 > **Nota (Ajuste · sep 2026):** el correo post-firma usa la plantilla Sendgrid *B2B - Firma de contrato* (`contract`) con PDF adjunto. En paralelo se envía WhatsApp `contractSigned` (catálogo `whatsapp-templates.ts`).
 
-> **Nota (Ajuste · oct 2026):** el PDF adjunto corresponde al contrato v4 con evidencia de aceptación (IP / fecha-hora / OTP) materializada en el documento. La previsualización previa a la firma no incluye esos campos.
+> **Nota (Ajuste · oct 2026):** el PDF adjunto corresponde al contrato v4 con evidencia de aceptación (IP / fecha-hora / OTP) materializada en el documento. La previsualización previa a la firma no incluye esos campos. Se eliminó el **Anexo 1** del snapshot legal (preview y PDF).
 
 **Placeholder\*:** el mecanismo de no repudio se respalda con la **evidencia de la firma** consignada en el snapshot (OTP WhatsApp, IP, timestamps de aceptación) además del registro operativo de la signature. Queda pendiente que el equipo legal/de producto confirme si esta evidencia es suficiente o si se requiere un mecanismo adicional.
 
@@ -364,9 +364,9 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 - La comunicación de las condiciones del crédito ocurre en dos momentos: una primera comunicación general antes de la aceptación (ver paso 5) y una segunda comunicación con el detalle operativo después de la aceptación (ver paso 7) — pendiente de confirmar si ambas siguen siendo necesarias.
 - Si el cliente llega al momento de la firma sin haber aceptado los términos y condiciones, el sistema debe permitirle aceptarlos en ese momento (no rechazar automáticamente) y generar una alerta en Slack para el equipo de operaciones.
 - La aceptación de las condiciones del crédito es obligatoria antes de acceder al detalle completo y al documento legal.
-- El contrato (v4) debe visualizarse antes de la firma electrónica, con carátula diligenciada y sin la tabla de aceptación ni el Anexo 1.
+- El contrato (v4) debe visualizarse antes de la firma electrónica, con carátula diligenciada y sin la tabla de aceptación. El contrato no incluye Anexo 1.
 - La firma solo se completa cuando el código de verificación (OTP WhatsApp) es validado correctamente; si falla, el cliente puede reintentar o contactar al servicio al cliente, quien evalúa el caso puntual antes de decidir la solución.
-- Una vez finalizada la firma, el sistema genera automáticamente el documento legal firmado (v4 con tabla de aceptación diligenciada), envía copia PDF al correo del cliente y un aviso por WhatsApp (`contractSigned`).
+- Una vez finalizada la firma, el sistema genera automáticamente el documento legal firmado (v4 con tabla de aceptación diligenciada, sin Anexo 1), envía copia PDF al correo del cliente y un aviso por WhatsApp (`contractSigned`).
 - El mecanismo de firma electrónica debe garantizar la evidencia de la firma (OTP WhatsApp, IP, fecha/hora de aceptación y timestamps operativos) como respaldo de su validez legal.
 - El bono D1 únicamente se asigna cuando la firma ha sido completada exitosamente.
 - El bono D1 es único e intransferible; el sistema no debe permitir reemplazarlo una vez asignado a un cliente.
@@ -453,4 +453,4 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 - Estándar de trazabilidad por Slack y manejo de excepciones (posible rechazo/revisión manual) acordado en la reunión "Producto: Check-in" (21 de julio de 2026), aplicado por consistencia a este documento.
 - Transcripción y resumen de la reunión "Producto: Check-in" (23 de julio de 2026) — acuerdos sobre: eliminación de referencias al pagaré, unificación de los pasos de autenticación, mensajes de error genéricos, eliminación del término "circuito cerrado", ajuste del mecanismo de no repudio, inclusión de enlace al panel de administración en las alertas de Slack, tiempo estimado de generación del documento firmado, y flujo operativo de emisión y asignación del bono D1.
 - Diseño de referencia de pantalla de condiciones del crédito (imagen aportada por el usuario), usado para validar el contenido real mostrado al cliente en el paso 5.
-- *Contrato.docx* v4 (14 de octubre de 2026) — carátula, tabla de registros de aceptación y Anexo 1; implementación en `credits-platform` (builder de contrato en `b2b`, preview/firma en redemption, PDF por correo `contract`).
+- *Contrato.docx* v4 (14 de octubre de 2026) — carátula y tabla de registros de aceptación (sin Anexo 1 en la implementación); implementación en `credits-platform` (builder de contrato en `b2b`, preview/firma en redemption, PDF por correo `contract`).
