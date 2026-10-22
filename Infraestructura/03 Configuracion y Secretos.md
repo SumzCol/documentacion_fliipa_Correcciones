@@ -73,6 +73,17 @@ En runtime, B2B (u otro caller) envía la **key** estable; communications resuel
 
 `url-bindings.json` define, por `packageDir`, qué variable de entorno recibe la URL de qué otro servicio (`from: "services.<slug>"`) o de un valor calculado (`from: "computed.<nombre>"`), con un `suffix` opcional de *path*. Ejemplos: `backends/b2b` recibe `CORE_BASE_URL`, `COMMUNICATIONS_SERVICE_URL` y `RULES_ENGINE_URL`; `apps/checkout` recibe `API_BASE_URL` y, como variable de **build-time** (`buildTime: true`, porque Next.js la *inyecta* en el bundle), `NEXT_PUBLIC_REDEMPTION_BASE_URL`.
 
+Además de los bindings, `apps/checkout` declara literales de **build-time** en `staticBuildArgs` de `dev-service-matrix.json` / `prod-service-matrix.json` (mismas URLs en STG y PROD):
+
+| Variable | Uso |
+|---|---|
+| `NEXT_PUBLIC_PERSONAL_DATA_POLICY_URL` | Footer / consentimientos → política de tratamiento de datos (Google Doc publicado) |
+| `NEXT_PUBLIC_TYC_URL` | Footer / hipervínculo de TyC → términos y condiciones (Google Doc publicado) |
+| `NEXT_PUBLIC_CUSTOMER_SERVICE_URL` | WhatsApp de soporte |
+| `ALLOW_SEARCH_INDEXING` | Indexación (`false` en STG, `true` en PROD) |
+
+Cambiar esas URLs o flags exige actualizar la matriz, rebuild de la imagen de `checkout` y redeploy; no se aplican con `pnpm env:sync:dev`.
+
 ## IAM del operador (laptop)
 
 Rol custom de mínimo privilegio para ejecutar despliegues sin usar `Owner`/`Editor`/`IAM Admin`:
