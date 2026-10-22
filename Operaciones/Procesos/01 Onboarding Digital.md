@@ -89,12 +89,14 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 **Decisión:** ¿La validación del cupo fue exitosa?
 
-- **Exitoso:** el flujo continúa hacia el registro de ubicación.
-- **Fallido:** el cliente vuelve a la pantalla de ingreso para intentarlo de nuevo.
+- **Exitoso:** el flujo continúa hacia el registro de ubicación (paso 4) y se crea un checkout en curso (`REQUEST_STARTED`) en el panel admin.
+- **Fallido (sin match activo en rules-engine):** el portal muestra el mensaje de que pronto habrá una opción; el cliente **permanece en la landing** (no entra al funnel de pantallas). El backend registra el intento como checkout **`REQUEST_LANDING_EXIT`** (estado admin **Sin preaprobación**), con consentimientos de landing y datos de dispositivo, para contabilizarlo en la lista de checkouts y en el reporte de funnel (paso **Landing / inicio**). Se mantiene la alerta operativa `CHECKOUT_CLIENT_NOT_FOUND`.
 
-**Resultado:** Cupo preaprobado recuperado de la base de datos. Esta evaluación corresponde únicamente a una preaprobación y no representa la aprobación definitiva del crédito.
+**Resultado:** Cupo preaprobado recuperado de la base de datos cuando aplica. Esta evaluación corresponde únicamente a una preaprobación y no representa la aprobación definitiva del crédito.
 
 **Tiempo estimado:** ~5 segundos (consulta directa, no cálculo en línea).
+
+> **Nota técnica (Ajuste · oct 2026):** `POST /checkouts/landing-exit` (B2B) persiste la salida en landing; no confundir con un checkout en curso que avanza a ubicación, cupo o OTP. Commit de referencia en `credits-platform`: `e802325c`.
 
 ---
 
