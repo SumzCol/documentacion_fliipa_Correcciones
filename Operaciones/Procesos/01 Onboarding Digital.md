@@ -151,6 +151,8 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 **Tiempo estimado:** ~15 segundos.
 
+> **Nota técnica (Ajuste · oct 2026):** el texto legal publicado no vive en la app: el hipervínculo de términos y condiciones apunta a un Google Doc publicado (`NEXT_PUBLIC_TYC_URL`). En la landing, el footer también enlaza la política de tratamiento de datos personales (`NEXT_PUBLIC_PERSONAL_DATA_POLICY_URL`) al mismo tipo de documento. Ambas URLs son *build-time* de `apps/checkout` (`staticBuildArgs` en la matriz de deploy) y son las mismas en STG y PROD; un cambio de URL exige rebuild + redeploy de `checkout` (no basta `env:sync`).
+
 ---
 
 ### 8. Registro del representante legal
