@@ -205,7 +205,7 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 
 **Actor:** Cliente.
 
-**Proceso:** El cliente ingresa el código recibido; el sistema valida su vigencia y coincidencia. Tiene la opción de reenviar el código si no lo recibe. Al validarse el OTP, el sistema registra la evidencia de aceptación (dirección IP, fecha/hora en zona Bogotá y código OTP) para materializarla en el documento firmado.
+**Proceso:** El cliente ingresa el código recibido; el sistema valida su vigencia y coincidencia. Tiene la opción de reenviar el código si no lo recibe. Al validarse el OTP, el sistema registra la evidencia de aceptación (dirección IP, fecha/hora en zona Bogotá, código OTP y **versión del contrato** `v4`) para materializarla en el documento firmado y en la ficha del cliente en Admin (Acuerdos legales → metadata de firma, campo **Versión Contrato**).
 
 **Decisión:** ¿El código ingresado es válido?
 
@@ -246,7 +246,7 @@ Cada paso incluye la descripción del proceso (qué ocurre a nivel técnico u op
 
 > **Nota (Ajuste · sep 2026):** el correo post-firma usa la plantilla Sendgrid *B2B - Firma de contrato* (`contract`) con PDF adjunto. En paralelo se envía WhatsApp `contractSigned` (catálogo `whatsapp-templates.ts`).
 
-> **Nota (Ajuste · oct 2026):** el PDF adjunto corresponde al contrato v4 con evidencia de aceptación (IP / fecha-hora / OTP) materializada en el documento. La previsualización previa a la firma no incluye esos campos. Se eliminó el **Anexo 1** del snapshot legal (preview y PDF).
+> **Nota (Ajuste · oct 2026):** el PDF adjunto corresponde al contrato v4 con evidencia de aceptación (IP / fecha-hora / OTP) materializada en el documento. La previsualización previa a la firma no incluye esos campos. Se eliminó el **Anexo 1** del snapshot legal (preview y PDF). La metadata de firma en Admin incluye **Versión Contrato: v4** (campo JSON `contractVersion` en `contract_signature`; firmas anteriores sin el campo se muestran como N/A).
 
 **Placeholder\*:** el mecanismo de no repudio se respalda con la **evidencia de la firma** consignada en el snapshot (OTP WhatsApp, IP, timestamps de aceptación) además del registro operativo de la signature. Queda pendiente que el equipo legal/de producto confirme si esta evidencia es suficiente o si se requiere un mecanismo adicional.
 
