@@ -89,10 +89,12 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 **Decisión:** ¿La validación del cupo fue exitosa?
 
-- **Exitoso:** el flujo continúa hacia el registro de ubicación.
-- **Fallido:** el cliente vuelve a la pantalla de ingreso para intentarlo de nuevo.
+- **Exitoso:** el flujo continúa hacia el registro de ubicación. Al avanzar, se olvida la racha de documentos sin cupo de esa visita.
+- **Fallido:** el cliente permanece en la landing. En la misma carga de la página, el primer documento sin cupo (sea cual sea el número) abre un modal para intentar de nuevo. Desde el segundo fallo, aunque el documento cambie, abre un modal para dejar un celular de WhatsApp. Si esa cédula ya tenía un celular, se pide de nuevo y al guardarlo se actualiza el mismo registro; el aviso dice que actualizó el dato de contacto.
 
-**Resultado:** Cupo preaprobado recuperado de la base de datos. Esta evaluación corresponde únicamente a una preaprobación y no representa la aprobación definitiva del crédito.
+**Resultado:** Cupo preaprobado recuperado de la base de datos. Esta evaluación corresponde únicamente a una preaprobación y no representa la aprobación definitiva del crédito. Si no hay cupo y el cliente deja el celular, el documento y el teléfono quedan guardados para contactarlo después; el teléfono no se muestra en el admin. Un segundo envío del mismo documento no crea otra fila: actualiza el teléfono.
+
+> **Nota técnica (Ajuste · oct 2026):** la racha de fallos vive solo en la página abierta. Recargar o cerrar la pestaña la borra y el siguiente fallo vuelve al modal de reintento; el segundo vuelve a pedir el WhatsApp aunque el celular ya esté guardado. El dato vive en `landing_contact_requests` (base `fliipa_b2b`), un registro activo por documento. Al guardar, la respuesta indica si fue alta o actualización. Un documento con cupo que entra a checkout o a redención también borra la racha.
 
 **Tiempo estimado:** ~5 segundos (consulta directa, no cálculo en línea).
 
@@ -362,7 +364,7 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 ## Reglas de negocio
 
 - Cada cliente inicia el proceso mediante un enlace a la landing page enviado por Sendgrid y Zenvia.
-- El cupo preaprobado se consulta a partir de información transaccional de D1 **ya calculada y almacenada previamente**; si la identificación falla, el cliente debe reintentar el ingreso de su NIT o identificación.
+- El cupo preaprobado se consulta a partir de información transaccional de D1 **ya calculada y almacenada previamente**. Si no hay cupo, el primer fallo de esa visita pide reintentar y desde el segundo se pide un WhatsApp, también después de recargar. Si esa cédula ya tenía celular, el nuevo envío actualiza el mismo registro y el aviso lo indica.
 - La aceptación de términos y condiciones es obligatoria, tanto en el flujo NIT como en el flujo CC; si no se acepta, el sistema simplemente no permite avanzar.
 - - El cliente debe validar un código de verificación enviado a su correo electrónico antes de crear el PIN de seguridad; puede solicitar el reenvío si no lo recibe.
 - El cliente debe confirmar en pantalla los datos del representante legal (paso 8.1) antes de continuar hacia la validación del correo electrónico.
