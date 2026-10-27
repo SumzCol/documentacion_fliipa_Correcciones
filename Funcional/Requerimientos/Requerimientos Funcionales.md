@@ -3,10 +3,10 @@
 | Documento | Requerimientos Funcionales |
 |-----------|------------------------------|
 | **Proyecto** | Fliipa |
-| **Versión** | 1.8 |
+| **Versión** | 1.9 |
 | **Estado** | En revisión |
 | **Responsable** | Producto, negocio y QA |
-| **Última actualización** | 2026-10-20 |
+| **Última actualización** | 2026-10-27 |
 
 ---
 
@@ -25,6 +25,7 @@
 | 1.7 | 2026-09-09 | Equipo técnico | RF-014: post-firma también notifica por WhatsApp (`contractSigned`). Aprobación KYC: correo `welcome` + WhatsApp `creditApproved`. |
 | 1.7 | 2026-09-09 | Equipo técnico | Se corrige RF-013 y RF-006: la firma del contrato **sí se realiza con OTP** (mecanismo vigente en código). Se revierte la nota de ago-2026 que la describía como proveedor externo. |
 | 1.8 | 2026-10-20 | Equipo técnico | RF-005 / RF-032: preaprobación B2B usa reglas duras `PCT_EFECTIVO` y `CUPO_REAL` (no `CUPO_CALCULADO`) con toggles y umbrales en `product_settings.b2b_preapproval_config`; el cupo asignado al core es el `CUPO_REAL` de la observación. |
+| 1.9 | 2026-10-27 | Equipo técnico | RF-005: la tarjeta del checkout muestra `lineCap` de Core en pesos si es mayor que cero; si no, `CUPO_REAL` en pesos. Si Core no responde, el formulario no se bloquea. RF-016: `GET /clients/credit-line` acepta `checkoutId` o `document` + `documentType`. |
 
 ---
 
@@ -66,7 +67,7 @@ Cubre los 11 procesos de negocio definidos en [Alcance del Producto](../../Produ
 | RF-002 | Creación de solicitud (checkout) | Crear una solicitud a partir de documento y tipo de documento, reutilizando la solicitud existente en estado `REQUEST_STARTED` si el cliente aún no la ha completado. | Cliente empresarial | Alta | Implementado | `backends/b2b/src/controllers/checkouts/create-checkout.ts` |
 | RF-003 | Prevención de solicitudes duplicadas | Impedir que un mismo documento inicie más de una solicitud si ya existe un cliente registrado con ese documento. | Sistema (automático) | Alta | Implementado | `checkouts/create-checkout.ts` |
 | RF-004 | Actualización incremental del checkout | Permitir actualizar los datos del checkout (negocio, ubicación, representante legal, cuenta bancaria) de forma incremental, en varios pasos. | Cliente empresarial | Alta | Implementado | `checkouts/update-checkout.ts` |
-| RF-005 | Cálculo del cupo preaprobado | Calcular y mostrar al cliente el cupo preaprobado con base en criterios de consumo histórico en D1. | Sistema (automático) | Alta | Implementado: el motor B2B (`B2B_PREAPPROVAL`) aplica reglas duras configurables sobre `PCT_EFECTIVO` y `CUPO_REAL` (toggles + umbrales en `b2b_preapproval_config`). El cupo que se asigna / muestra como preaprobado es el **cupo real** (`CUPO_REAL`) de la observación cargada, no `CUPO_CALCULADO`. Settings legacy con `minCupoCalculado` se resuelven como `minCupoReal`. | `services/rules-engine/src/models/b2b-preapproval/index.ts`, `packages/kernel/src/common/settings/get-b2b-preapproval-setting.ts`, `backends/b2b/src/db/seeds/product-settings.seed.ts` |
+| RF-005 | Cálculo del cupo preaprobado | Calcular y mostrar al cliente el cupo preaprobado con base en criterios de consumo histórico en D1. | Sistema (automático) | Alta | Implementado: el motor B2B (`B2B_PREAPPROVAL`) aplica reglas duras configurables sobre `PCT_EFECTIVO` y `CUPO_REAL` (toggles + umbrales en `b2b_preapproval_config`). El cupo que se asigna es el **cupo real** (`CUPO_REAL`) de la observación, no `CUPO_CALCULADO`. En el checkout la tarjeta muestra el `lineCap` de Core en pesos cuando es mayor que cero; si no hay línea, el `CUPO_REAL` en pesos. Si Core no responde, el formulario sigue con el cupo del motor. | `services/rules-engine/src/models/b2b-preapproval/index.ts`, `backends/b2b/src/controllers/checkouts/get-checkout.ts`, `apps/checkout/app/checkout/[id]/page.tsx` |
 
 ### Validación de identidad
 
@@ -100,7 +101,7 @@ Cubre los 11 procesos de negocio definidos en [Alcance del Producto](../../Produ
 
 | ID | Nombre | Descripción | Actor(es) | Prioridad | Estado | Fuente |
 |----|--------|--------------|-----------|-----------|--------|--------|
-| RF-016 | Consulta de estado y plan de pagos | Permitir consultar el estado del crédito, el saldo disponible y el plan de pagos vigente. | Cliente empresarial | Alta | Implementado | `credit-line/get-credit-status.ts`, `credit-line/simulate-payment-plan.ts` |
+| RF-016 | Consulta de estado y plan de pagos | Permitir consultar el estado del crédito, el saldo disponible y el plan de pagos vigente. `GET /clients/credit-line` acepta `checkoutId`, o `document` junto con `documentType` (portal). | Cliente empresarial | Alta | Implementado | `backends/b2b/src/services/get-credit-status-by-query.ts`, `credit-line/simulate-payment-plan.ts` |
 | RF-017 | Restricción de acceso por estado de crédito | Permitir el acceso al portal del cliente únicamente si la línea de crédito está en estado activa. | Sistema (automático) | Alta | Implementado | `apps/redemption/actions/auth.ts` |
 | RF-018 | Ajuste administrativo de cupo y corte | Permitir al administrador ajustar el cupo y la fecha de corte de una línea de crédito, con las validaciones correspondientes. | Administrador del producto | Media | Implementado, con hallazgo: el rango válido de `cutoffDay` (0-31) no coincide con el exigido en redemption (1-31); se recomienda unificar. | `backends/admin/src/controllers/credit-lines.controller.ts`, `apps/redemption/lib/is-complete-redemption-credit-settings.ts` |
 

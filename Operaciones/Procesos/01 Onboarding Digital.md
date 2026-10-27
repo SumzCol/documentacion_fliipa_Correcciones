@@ -100,6 +100,8 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 > **Nota técnica (Ajuste · oct 2026):** la racha de fallos vive solo en la página abierta. Recargar o cerrar la pestaña la borra y el siguiente fallo vuelve al modal de reintento; el segundo vuelve a pedir el WhatsApp aunque el celular ya esté guardado. El dato vive en `landing_contact_requests` (base `fliipa_b2b`), un registro activo por documento. Al guardar, la respuesta indica si fue alta o actualización. Un documento con cupo que entra a checkout o a redención también borra la racha.
 
+> **Nota técnica (Ajuste · oct 2026):** ya dentro del checkout, la tarjeta de cupo (pasos de nombre y ubicación) muestra el `lineCap` de Core en pesos cuando es mayor que cero. Si Core no tiene línea, muestra el `CUPO_REAL` del rules-engine, también en pesos: la evaluación guarda centavos y la consulta los convierte antes de pintarlos. Si Core no responde, el formulario no se bloquea y la tarjeta usa el cupo del motor. El portal sigue leyendo la línea con documento y tipo (`GET /clients/credit-line`).
+
 **Tiempo estimado:** ~5 segundos (consulta directa, no cálculo en línea).
 
 > **Nota técnica (Ajuste · oct 2026):** `POST /checkouts/landing-exit` (B2B) persiste la salida en landing; no confundir con un checkout en curso que avanza a ubicación, cupo o OTP. Commit de referencia en `credits-platform`: `e802325c`.
