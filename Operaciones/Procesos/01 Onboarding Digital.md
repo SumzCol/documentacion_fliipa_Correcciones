@@ -89,6 +89,10 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 **Decisión:** ¿La validación del cupo fue exitosa?
 
+- **Exitoso:** el flujo continúa hacia el registro de ubicación (paso 4) y se crea un checkout en curso (`REQUEST_STARTED`) en el panel admin.
+- **Fallido (sin match activo en rules-engine):** el portal muestra el mensaje de que pronto habrá una opción; el cliente **permanece en la landing** (no entra al funnel de pantallas). El backend registra el intento como checkout **`REQUEST_LANDING_EXIT`** (estado admin **Sin preaprobación**), con consentimientos de landing y datos de dispositivo, para contabilizarlo en la lista de checkouts y en el reporte de funnel (paso **Landing / inicio**). Se mantiene la alerta operativa `CHECKOUT_CLIENT_NOT_FOUND`.
+
+**Resultado:** Cupo preaprobado recuperado de la base de datos cuando aplica. Esta evaluación corresponde únicamente a una preaprobación y no representa la aprobación definitiva del crédito.
 - **Exitoso:** el flujo continúa hacia el registro de ubicación. Al avanzar, se olvida la racha de documentos sin cupo de esa visita.
 - **Fallido:** el cliente permanece en la landing. En la misma carga de la página, el primer documento sin cupo (sea cual sea el número) abre un modal para intentar de nuevo. Desde el segundo fallo, aunque el documento cambie, abre un modal para dejar un celular de WhatsApp. Si esa cédula ya tenía un celular, se pide de nuevo y al guardarlo se actualiza el mismo registro; el aviso dice que actualizó el dato de contacto.
 
@@ -97,6 +101,8 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 > **Nota técnica (Ajuste · oct 2026):** la racha de fallos vive solo en la página abierta. Recargar o cerrar la pestaña la borra y el siguiente fallo vuelve al modal de reintento; el segundo vuelve a pedir el WhatsApp aunque el celular ya esté guardado. El dato vive en `landing_contact_requests` (base `fliipa_b2b`), un registro activo por documento. Al guardar, la respuesta indica si fue alta o actualización. Un documento con cupo que entra a checkout o a redención también borra la racha.
 
 **Tiempo estimado:** ~5 segundos (consulta directa, no cálculo en línea).
+
+> **Nota técnica (Ajuste · oct 2026):** `POST /checkouts/landing-exit` (B2B) persiste la salida en landing; no confundir con un checkout en curso que avanza a ubicación, cupo o OTP. Commit de referencia en `credits-platform`: `e802325c`.
 
 ---
 
