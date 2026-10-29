@@ -1,80 +1,171 @@
 # Pipeline de despliegue (CI/CD)
 
-El monorepo soporta dos vías de despliegue equivalentes por entorno: **CLI** (scripts bash, ejecutables desde el laptop del operador) y **GitHub Actions** (workflows por servicio o por flota). Ambas terminan aplicando la misma matriz de configuración (`config/deploy/*-service-matrix.json`).
+Este documento describe los flujos de despliegue vigentes para PROD y STG/DEV. Los workflows actuales son **dispatch-only**: no despliegan automáticamente en cada push. Ambos detectan los servicios afectados, corren tests, construyen las imágenes necesarias y aplican la infraestructura con OpenTofu.
 
-## PROD
+La matriz de cada entorno es la fuente de verdad para servicios, nombres Cloud Run, capacidad y configuración:
 
-| Vía | Comando / disparo |
-|---|---|
-| CLI | `bash scripts/pdeploy-prod.sh --all` (toda la flota, en el orden de `deployOrder`) |
-| CLI (subset) | `bash scripts/pdeploy-prod.sh webhooks b2b` |
-| CLI (paquete nuevo) | `bash scripts/pdeploy-prod.sh --package apps/nuevo` (scaffold + deploy) |
-| CLI (forzar rebuild) | `bash scripts/pdeploy-prod.sh checkout --force` |
-| GitHub Actions | Actions → `PROD - creds-{slug}` → requiere input `confirm=DEPLOY` |
+- PROD: [`config/deploy/prod-service-matrix.json`](../../config/deploy/prod-service-matrix.json)
+- STG/DEV: [`config/deploy/dev-service-matrix.json`](../../config/deploy/dev-service-matrix.json)
 
-`pdeploy-prod.sh` es idempotente: valida o crea el Dockerfile del servicio, su entrada en la matriz, el workflow de GitHub y los *mounts* de secretos si faltan, antes de desplegar. Cada workflow `.github/workflows/creds-*-prod.yml` reproduce el mismo comportamiento vía Actions, por lo que ambas vías son intercambiables.
+## Resumen del flujo
 
-Los Dockerfiles nuevos parten de plantillas versionadas en [`docs/infra/templates/`](../README.md): `Dockerfile.node-service` (servicios Node) y `Dockerfile.next-app` (apps Next.js).
+```mermaid
+flowchart LR
+    DISPATCH["Dispatch manual<br/>GitHub Actions"]
+    DETECT["Detectar slugs<br/>y si migrar"]
+    TEST["pnpm test"]
+    BUILD["Build y push<br/>imágenes afectadas"]
+    MIGRATEIMG["Build de imagen<br/>de migraciones"]
+    DEPLOY["OpenTofu plan/guard/apply"]
+    MIGRATE["Snapshot + ejecutar<br/>Cloud Run Job migrate"]
+    FIREBASE["Deploy Firebase Hosting"]
+    TAG["Actualizar tag<br/>*-deployed"]
 
-## STG / demo (`product-fintech-dev`)
+    DISPATCH --> DETECT --> TEST
+    TEST --> BUILD
+    TEST --> MIGRATEIMG
+    BUILD --> DEPLOY
+    MIGRATEIMG --> DEPLOY
+    DEPLOY --> MIGRATE
+    MIGRATE --> FIREBASE
+    DEPLOY --> FIREBASE
+    FIREBASE --> TAG
+```
 
-La vía preferida es **GitHub Actions en paralelo** (matrix, una fila por servicio):
+Los pasos de migración se ejecutan solamente cuando la detección determina `run_migrate=true`. La ejecución final requiere que los tests hayan pasado y que los builds necesarios hayan terminado correctamente. Si no hay imágenes que reconstruir, el deploy puede seguir para aplicar cambios de infraestructura.
+
+## GitHub Actions
+
+| Entorno | Workflow | Archivo | Ejecución |
+|---|---|---|---|
+| PROD | `PROD - deploy` | [`prod-deploy.yml`](../../.github/workflows/prod-deploy.yml) | Manual, con `workflow_dispatch` |
+| STG/DEV | `DEV - deploy` | [`dev-deploy.yml`](../../.github/workflows/dev-deploy.yml) | Manual, con `workflow_dispatch` |
+
+No hay un workflow vigente por servicio ni deploy automático por push. Para iniciar un despliegue desde GitHub CLI:
 
 ```bash
-gh workflow run stg-deploy.yml -f slugs=all
-gh workflow run stg-deploy.yml -f slugs=b2b,admin-back -f force=true
-gh workflow run stg-deploy.yml -f slugs=b2b -f run_migrate=true
+# PROD
+gh workflow run prod-deploy.yml -f slugs=auto -f migrate=auto
 
-gh run list --workflow=stg-deploy.yml --limit 5
+# STG/DEV
+gh workflow run dev-deploy.yml -f slugs=auto -f migrate=auto
+
+# Consultar runs
+gh run list --workflow=prod-deploy.yml --limit 5
+gh run list --workflow=dev-deploy.yml --limit 5
 gh run watch
 ```
 
-También se dispara automáticamente en cada push a `main` que toque `apps/`, `backends/`, `services/` o `packages/` (mapeo *path → slug* vía `scripts/lib/stg_detect_slugs.py`; los paquetes compartidos como `packages/kernel` o el lockfile disparan el redeploy de toda la flota).
+Los workflows usan Workload Identity Federation para autenticarse con GCP; no requieren una llave JSON de service account en el runner. PROD usa el GitHub Environment `prod`; STG/DEV usa `dev`. Sus variables y secretos están configurados por entorno.
 
-El workflow asume la flota STG **ya provisionada** (Artifact Registry, Cloud SQL, service accounts, secretos montados): no ejecuta `--with-infra` ni siembra secretos. Las migraciones solo corren si el *path* modificado toca paquetes con base de datos, o si se pasa `-f run_migrate=true`.
+### Selección de servicios y migraciones
 
-La vía **laptop** (`scripts/deploy-dev.sh`, alias `pnpm deploy:dev`) queda para el primer aprovisionamiento de infraestructura, siembra de secretos/seeds, o como *fallback*:
+Ambos workflows aceptan:
 
-```bash
-pnpm deploy:dev                       # interactivo (pregunta infra / migraciones / build)
-bash scripts/deploy-dev.sh --dry-run
-bash scripts/deploy-dev.sh --skip-infra
-pnpm deploy:dev -- admin-back         # un servicio, rebuild solo si cambió (fingerprint)
-pnpm deploy:dev -- core admin-back --force
-pnpm deploy:dev -- --with-infra --with-migrate --with-build --run-seeds
-```
-
-`deploy-dev.sh` corre en una *subshell* para que las variables `CREDITS_*` / `CLOUDSDK_*` no se filtren a la shell del operador. Existe además un asistente en el **panel admin** (`System → STG Deploy`, solo rol `sysadmin`) que arma el comando `gh workflow run …` o `pnpm deploy:dev -- …` recomendado, pero **no ejecuta** el despliegue por sí mismo; opcionalmente notifica el despliegue por Slack.
-
-## Aislamiento PROD / STG en el pipeline
-
-| | PROD | STG / DEV |
+| Input | Valores | Comportamiento |
 |---|---|---|
-| Wrapper de contexto | `pdeploy-prod.sh` → `pin_prod_deploy_context` (fuerza `CREDITS_DEPLOY_ENV=prod`) | `deploy-dev.sh` / workflow `stg-deploy.yml` → `pin_dev_deploy_context` |
-| Verificación | Los scripts comprueban `matrix.projectId == PROJECT_ID` y abortan si no coincide con el entorno activo | ídem |
+| `slugs` | `auto` | Despliega los servicios detectados desde el último deploy exitoso |
+| `slugs` | CSV, por ejemplo `b2b,admin-back` | Despliega los slugs indicados |
+| `slugs` | `all` | Selecciona toda la flota |
+| `migrate` | `auto` | Migra si los slugs incluyen servicios con migraciones o si se selecciona `all` |
+| `migrate` | `on` | Fuerza la ejecución de migraciones |
+| `migrate` | `off` | Omite migraciones, incluso con `slugs=all` |
 
-Esta verificación evita, por ejemplo, que un despliegue de STG apunte por error a Cloud SQL o Secret Manager de PROD.
-
-## Sincronización de URLs entre servicios
-
-Después de cada despliegue que afecte endpoints consumidos por otros servicios:
+Ejemplos:
 
 ```bash
-bash scripts/prod-urls.sh              # sync → apply → verify
-bash scripts/prod-urls.sh verify
+gh workflow run dev-deploy.yml -f slugs=b2b,admin-back -f migrate=auto
+gh workflow run prod-deploy.yml -f slugs=all -f migrate=off
 ```
 
-El registro de URLs vive como secreto en Secret Manager (`creds-prod-url-registry` en PROD, `creds-dev-url-registry` en STG) y se calcula con `scripts/lib/prod_urls.py`, cruzando `url-bindings.json` con las URLs reales de Cloud Run (o con los orígenes públicos de `domains.prod.env` cuando `DEPLOY_PHASE=F`, ver [Dominio y Load Balancer](05 Dominio y Load Balancer.md)).
+`auto` compara los cambios contra el tag del último despliegue exitoso (`dev-deployed` o `prod-deployed`), para incluir commits acumulados desde esa ejecución. Los cambios compartidos —por ejemplo en `packages/`, lockfile o configuración del grafo de build— pueden seleccionar toda la flota. Los cambios bajo `terraform/` pueden ejecutar el apply sin reconstruir imágenes. La lógica está en [`scripts/detect-changed-services.py`](../../scripts/detect-changed-services.py).
 
-## Checklist para un servicio nuevo
+La migración automática aplica a los paquetes de base de datos `b2b`, `communications` y `rules-engine`; el workflow también puede forzarla con `migrate=on`. Antes de migrar, se crean snapshots de las bases de datos del entorno en el bucket de snapshots correspondiente. Después se ejecuta `creds-migrate-prod` o `creds-migrate-dev`.
 
-1. Código en `apps/`, `backends/`, `gateways/` o `services/`.
-2. `bash scripts/pdeploy-prod.sh --package <dir>` (genera Dockerfile, entrada en la matriz, workflow y mounts si faltan, y despliega).
-3. Completar `url-bindings.json` si el servicio consume URLs de otros.
-4. `bash scripts/prod-urls.sh`.
-5. Commitear el Dockerfile, la entrada en la matriz y el workflow generados.
+El input `bootstrap` existe en PROD únicamente para el primer aprovisionamiento intencional de la flota cuando el state está vacío. No debe usarse en despliegues ordinarios.
+
+## Despliegue manual desde laptop
+
+Los scripts CLI siguen disponibles como alternativa operativa. Fijan el proyecto esperado y validan que coincida con el entorno seleccionado. Para despliegues regulares de código en STG/DEV, el workflow `DEV - deploy` es el camino recomendado; la CLI es útil para bootstrap, infraestructura, secretos, seeds y fallback.
+
+### PROD
+
+```bash
+# Toda la flota
+bash scripts/pdeploy-prod.sh --all
+
+# Servicios específicos
+bash scripts/pdeploy-prod.sh webhooks b2b
+
+# Plan sin mutar GCP
+bash scripts/pdeploy-prod.sh webhooks --dry-run
+
+# Forzar rebuild/redeploy
+bash scripts/pdeploy-prod.sh checkout --force
+
+# Scaffold y deploy de un paquete nuevo
+bash scripts/pdeploy-prod.sh --package apps/nuevo
+```
+
+`pdeploy-prod.sh` fija el contexto PROD (`product-fintech`) y ejecuta el bootstrap/deploy definido por los scripts del repositorio. Para el pipeline de GitHub, usar [`prod-deploy.yml`](../../.github/workflows/prod-deploy.yml); no hay workflows `creds-*-prod.yml` separados por servicio.
+
+### STG/DEV
+
+```bash
+# Despliegue interactivo de flota
+pnpm deploy:dev
+
+# Un servicio; rebuild según fingerprint de contenido
+pnpm deploy:dev -- admin-back
+
+# Forzar rebuild/redeploy de los slugs seleccionados
+pnpm deploy:dev -- core admin-back --force
+
+# Validar/provisionar infraestructura, migrar y desplegar
+pnpm deploy:dev -- --with-infra --with-migrate --with-build
+
+# Plan sin mutar GCP
+bash scripts/deploy-dev.sh --dry-run
+```
+
+Con slugs explícitos, `deploy-dev.sh` omite por defecto infraestructura, migraciones y seed de secretos, pero puede reconstruir el servicio si cambió el fingerprint. Los flags `--with-infra`, `--with-migrate`, `--with-build` y `--with-secrets` habilitan explícitamente esas etapas. Ver el detalle de opciones en [Staging / demo](./dev-staging.md).
+
+## Controles de seguridad y consistencia
+
+- Los proyectos están separados: PROD es `product-fintech`; STG/DEV es `product-fintech-dev`.
+- Los workflows de Actions obtienen credenciales GCP mediante Workload Identity Federation.
+- Antes del apply se verifica la existencia de secretos requeridos por los mounts.
+- OpenTofu revisa el state y aborta si el plan intenta recrear recursos vivos protegidos —como Cloud SQL o Cloud Run— en vez de actualizar la infraestructura existente.
+- Los deploys de PROD no se cancelan a mitad del proceso (`cancel-in-progress: false`). DEV puede cancelar una ejecución anterior de la misma rama.
+- Los tags `prod-deployed` y `dev-deployed` avanzan únicamente tras un deploy exitoso y se usan como referencia para detectar cambios acumulados.
+
+## URLs entre servicios
+
+Las URLs entre servicios se derivan de `url-bindings.json`, las matrices y la configuración de dominios. Para cambios que afecten URLs consumidas por otros servicios, verificar la sincronización del registro:
+
+```bash
+# PROD
+bash scripts/prod-urls.sh
+bash scripts/prod-urls.sh verify
+
+# STG/DEV
+pnpm env:sync:dev
+pnpm env:sync:dev -- verify
+```
+
+La documentación de arquitectura y dominios está en [Arquitectura y entornos](./README.md); los runbooks están en [Operación diaria](./day-to-day.md) y [Deploy PROD](../PROD-DEPLOY.md).
 
 ## Rollback
 
-1. Cloud Run → seleccionar la revisión anterior → mover el 100% del tráfico, **o**
-2. Re-ejecutar el workflow correspondiente con `git_ref` apuntando al SHA conocido como bueno.
+- **PROD:** mover el tráfico de Cloud Run a una revisión anterior o volver a ejecutar `prod-deploy.yml` con el SHA conocido como bueno y `migrate=off`. No hay workflow de restore de base de datos PROD.
+- **STG/DEV:** usar `dev-rollback.yml` para rollback de código. La restauración de una base de datos STG/DEV, si se requiere, es una operación aparte documentada en `dev-db-restore.yml`.
+- Una reversión de código no revierte automáticamente una migración ya aplicada; considerar compatibilidad de esquema y el snapshot previo antes de elegir la recuperación.
+
+## Referencias
+
+- [Arquitectura y entornos](./README.md)
+- [Staging / demo](./dev-staging.md)
+- [Operación diaria](./day-to-day.md)
+- [Checklist de release](./ship-checklist.md)
+- [`prod-deploy.yml`](../../.github/workflows/prod-deploy.yml)
+- [`dev-deploy.yml`](../../.github/workflows/dev-deploy.yml)
