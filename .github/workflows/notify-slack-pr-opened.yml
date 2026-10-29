@@ -2,7 +2,7 @@ name: Notify Slack on PR opened
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -24,6 +24,7 @@ jobs:
 
       - name: Build Slack JSON payload
         env:
+          PR_ACTION: ${{ github.event.action }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -34,13 +35,37 @@ jobs:
           PR_DELETIONS: ${{ github.event.pull_request.deletions }}
           PR_FILES: ${{ github.event.pull_request.changed_files }}
           PR_CREATED_AT: ${{ github.event.pull_request.created_at }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
           PR_ACTOR: ${{ github.actor }}
           PR_REVIEWERS: ${{ join(github.event.pull_request.requested_reviewers.*.login, ', ') }}
         run: |
           set -euo pipefail
           reviewers=${PR_REVIEWERS:-—}
+          draft_label=$([ "$PR_DRAFT" = "true" ] && echo "Sí (borrador)" || echo "No")
+
+          case "$PR_ACTION" in
+            opened)
+              header="Nueva PR de documentación"
+              verb="abierta"
+              ;;
+            reopened)
+              header="PR de documentación reabierta"
+              verb="reabierta"
+              ;;
+            ready_for_review)
+              header="PR de documentación lista para review"
+              verb="marcada lista para review"
+              ;;
+            *)
+              header="Actualización de PR de documentación"
+              verb="$PR_ACTION"
+              ;;
+          esac
 
           jq -nc \
+            --arg action "$PR_ACTION" \
+            --arg header "$header" \
+            --arg verb "$verb" \
             --arg number "$PR_NUMBER" \
             --arg title "$PR_TITLE" \
             --arg url "$PR_URL" \
@@ -53,18 +78,19 @@ jobs:
             --arg reviewers "$reviewers" \
             --arg actor "$PR_ACTOR" \
             --arg createdAt "$PR_CREATED_AT" \
+            --arg draft "$draft_label" \
             '{
-              text: ("<!channel> Nueva PR de documentación #\($number) — \($title)"),
+              text: ("<!channel> \($header) #\($number) — \($title)"),
               blocks: [
                 {
                   type: "header",
-                  text: { type: "plain_text", text: "Nueva PR de documentación", emoji: true }
+                  text: { type: "plain_text", text: $header, emoji: true }
                 },
                 {
                   type: "section",
                   text: {
                     type: "mrkdwn",
-                    text: ("<!channel> *<\($url)|#\($number) — \($title)>*")
+                    text: ("<!channel> *<\($url)|#\($number) — \($title)>*\n_Evento:_ `\($action)` · PR \($verb)")
                   }
                 },
                 {
@@ -74,7 +100,8 @@ jobs:
                     { type: "mrkdwn", text: ("*Autor*\n`\($author)`") },
                     { type: "mrkdwn", text: ("*Commits*\n`\($commits)`") },
                     { type: "mrkdwn", text: ("*Cambios*\n`+\($additions) / -\($deletions)` (\($files) files)") },
-                    { type: "mrkdwn", text: ("*Reviewers*\n\($reviewers)") }
+                    { type: "mrkdwn", text: ("*Reviewers*\n\($reviewers)") },
+                    { type: "mrkdwn", text: ("*Borrador*\n\($draft)") }
                   ]
                 },
                 {
@@ -82,7 +109,7 @@ jobs:
                   elements: [
                     {
                       type: "mrkdwn",
-                      text: ("Creada por `\($actor)` · \($createdAt) · <\($url)|Abrir PR>")
+                      text: ("Disparado por `\($actor)` · Creada \($createdAt) · <\($url)|Abrir PR>")
                     }
                   ]
                 }
