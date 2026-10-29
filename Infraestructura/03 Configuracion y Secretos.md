@@ -1,100 +1,144 @@
 # Configuración, variables de entorno y secretos
 
-Toda la configuración de despliegue es declarativa y vive en `config/deploy/`, versionada en el repositorio (salvo valores sensibles, que residen en Secret Manager o en archivos locales *gitignored*).
+La configuración de despliegue vive principalmente en `config/deploy/` y se versiona en el repositorio. Los valores sensibles se almacenan en Secret Manager en el proyecto GCP de cada entorno; los archivos locales con valores son *gitignored*. PROD y STG/DEV comparten el catálogo de nombres y variables, pero no comparten proyectos ni valores de secretos.
 
 ## Archivos de configuración
 
-| Archivo | Contenido |
+| Archivo | Responsabilidad |
 |---|---|
-| `gcp-prod.env` / `gcp-dev.env` | `PROJECT_ID`, `REGION`, `ARTIFACT_REPO` por entorno |
-| `domains.prod.env` / `domains.dev.env` | `DEPLOY_PHASE` y orígenes públicos (único punto de cambio de dominio) |
-| `prod-service-matrix.json` / `dev-service-matrix.json` | flota Cloud Run: orden de despliegue, *tiers* de capacidad, health checks, service accounts |
-| `service-catalog.json` / `service-catalog.dev.json` | mapeo `slug` → `packageDir` / nombre del servicio Cloud Run |
-| `url-bindings.json` | qué variable de entorno de cada servicio recibe la URL de qué otro servicio |
-| `runtime-secrets.json` | catálogo de secretos de Secret Manager: nombre del secreto, variable de entorno destino y qué servicios lo montan |
-| `iam-deploy-engineer-role.yaml` | permisos versionados del rol IAM custom `deployEngineer` |
-| `runtime-secrets.local.env.example` | plantilla de valores locales (el archivo real, `runtime-secrets.local.env`, está *gitignored*) |
+| [`gcp-prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-prod.env) / [`gcp-dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-dev.env) | Proyecto, región, Artifact Registry, Firebase Hosting y Cloud SQL por entorno |
+| [`domains.prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.prod.env) / [`domains.dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.dev.env) | `DEPLOY_PHASE`, orígenes y paths públicos de cada entorno |
+| [`prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json) / [`dev-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/dev-service-matrix.json) | Servicios Cloud Run, paquete, imagen, tier, acceso, service account, health path y base de datos |
+| [`service-catalog.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/service-catalog.json) / [`service-catalog.dev.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/service-catalog.dev.json) | Mapeo de slug a paquete y nombre de Cloud Run por entorno |
+| [`url-bindings.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/url-bindings.json) | Bindings explícitos de URLs calculadas para paquetes; incluye bindings marcados `buildTime` |
+| [`runtime-secrets.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/runtime-secrets.json) | Catálogo de secretos, variables destino, servicios que los montan y literales comunes/DEV |
+| [`iam-deploy-engineer-role.yaml`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/iam-deploy-engineer-role.yaml) | Permisos versionados del rol custom `deployEngineer` para operaciones desde laptop |
+| [`runtime-secrets.local.env.example`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/runtime-secrets.local.env.example) | Plantilla sin valores para el archivo local opcional de aprovisionamiento |
 
-## Tipos de variables y cómo llegan a Cloud Run
+Valores base por entorno y nombres exactos de recursos: [Arquitectura y entornos](01 Arquitectura y Entornos.md). Flujo de despliegue y comandos: [Pipeline CI/CD](02 Pipeline de Despliegue.md).
 
-| Tipo | Fuente | Mecanismo de entrega |
+## Cómo llega una variable a Cloud Run
+
+| Tipo de configuración | Fuente | Entrega |
 |---|---|---|
-| Secretos | `runtime-secrets.json` + `runtime-secrets.local.env` (o `.dev.local.env` en STG) | *mount* desde Secret Manager |
-| Literales | `serviceEnvLiterals` (+ `serviceEnvLiteralsDev` en STG) | `--update-env-vars` en el deploy |
-| URLs servicio-a-servicio | `url-bindings.json` | `prod_urls.py apply` (registro de URLs) |
-| Build-time (Next.js) | `staticBuildArgs` de la matriz + bindings marcados `buildTime` | *build-arg* de Docker |
+| Secreto | `runtime-secrets.json` y valor correspondiente en Secret Manager | Referencia al secreto/versión montada en Cloud Run |
+| Literal de runtime | `serviceEnvLiterals` en `runtime-secrets.json`; STG/DEV agrega o sobreescribe con `serviceEnvLiteralsDev` | Variables de entorno del servicio |
+| Variable generada por entorno | Matriz, dominios y configuración Terraform | Terraform compone `ENVIRONMENT`, variables de DB, URLs runtime y otros valores por servicio |
+| URL binding explícito | `url-bindings.json` | Herramientas de sincronización de URLs; algunos bindings se inyectan durante el build |
+| Build-time de Next.js | `staticBuildArgs` de la matriz y bindings con `buildTime: true` | Argumentos de build de Docker; quedan incluidos en la imagen/bundle |
 
-Cualquier variable nueva declarada en `.env.example` de un paquete debe quedar cableada en secretos, en literales, en `url-bindings.json`, en `staticBuildArgs`, o explícitamente exceptuada; esto se valida con un *gate* automático:
+```mermaid
+flowchart LR
+    MATRIX["Matriz por entorno<br/>servicios, DB, tier, build args"]
+    CATALOG["runtime-secrets.json<br/>nombres de secretos y literales"]
+    BINDINGS["url-bindings.json<br/>bindings explícitos"]
+    PROJECT["Proyecto GCP activo<br/>PROD o STG/DEV"]
+    SM["Secret Manager<br/>valores sensibles del proyecto"]
+    TF["Terraform / OpenTofu"]
+    IMAGE["Build de imagen Next.js"]
+    CR["Cloud Run"]
+
+    MATRIX --> TF
+    CATALOG --> TF
+    PROJECT --> TF
+    TF -->|"variables y referencias a secretos"| CR
+    SM -->|"valores montados en runtime"| CR
+    MATRIX --> IMAGE
+    BINDINGS --> IMAGE
+    BINDINGS -->|"sync de URL"| CR
+    IMAGE --> CR
+```
+
+En las configuraciones Terraform actuales, varias URLs de servicio-a-servicio se componen desde las URLs Cloud Run y los dominios del entorno. `url-bindings.json` no es una lista exhaustiva de todas las variables URL runtime. Consultar también `terraform/envs/prod/config.tf` y `terraform/envs/dev/config.tf` al cambiar o añadir una integración.
+
+### Regla para agregar una variable
+
+Cada variable declarada en el `.env.example` de un paquete debe quedar cubierta por una fuente de configuración de despliegue: catálogo de secretos, literales, URL binding, variables generadas por Terraform o `staticBuildArgs`. Ejecutar el verificador para el entorno afectado:
 
 ```bash
 python3 scripts/lib/verify_deploy_env_coverage.py --env dev
+python3 scripts/lib/verify_deploy_env_coverage.py --env prod
 ```
 
-Sincronización ordenada (cobertura → secretos+literales → URLs → verificación en vivo):
+`deploy-dev.sh` ejecuta el gate de cobertura para DEV. Antes de cambiar la configuración, determinar si el valor es secreto, literal de runtime o valor de build. No poner credenciales ni datos privados en literales, matrices, bindings o argumentos `NEXT_PUBLIC_*`.
+
+## Secretos y Secret Manager
+
+`runtime-secrets.json` define para cada secreto su `secretName`, `envVar` y los slugs que lo reciben. El archivo describe el catálogo; los valores viven en Secret Manager, separado por proyecto:
+
+- PROD: Secret Manager de `product-fintech`.
+- STG/DEV: Secret Manager de `product-fintech-dev`.
+
+El nombre del secreto puede ser igual en ambos proyectos, pero el valor/versionado es independiente. Algunos grupos del catálogo incluyen JWT e integración interna, secretos de webhooks, credenciales de Druo y proveedores de comunicaciones, y credenciales opcionales de Experian/Score. Revisar el catálogo para el inventario actualizado; no copiar valores sensibles a documentación.
+
+`DB_USER` y `DB_PASSWORD` también se montan desde Secret Manager para servicios conectados a Cloud SQL, aunque se agregan en Terraform aparte del arreglo `secrets` del catálogo.
+
+**Importante sobre `required`:** Terraform monta todas las entradas del catálogo asignadas a un servicio, sin filtrar por `required`. Por eso, el secreto debe existir en Secret Manager aunque su valor sea opcional para la lógica de negocio. `scripts/check-runtime-secrets.py` valida antes del apply que existan todos los secretos montados y evita que una aplicación falle parcialmente a mitad del despliegue. Un valor opcional puede usar un placeholder durante aprovisionamiento, pero debe reemplazarse antes de habilitar la integración correspondiente.
+
+### Valores locales y operación por entorno
+
+El archivo de valores local es opcional, ignorado por Git y no debe compartirse ni incluirse en commits:
+
+```text
+config/deploy/runtime-secrets.local.env
+```
+
+La plantilla está en [`runtime-secrets.local.env.example`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/runtime-secrets.local.env.example). El aprovisionamiento local de DEV puede leer los valores de ese archivo. En PROD, los valores se administran directamente en Secret Manager; el archivo local no es requisito para desplegar.
+
+Operaciones de PROD:
+
+```bash
+# Crear/actualizar un secreto y su asociación a servicios
+bash scripts/prod-runtime-secrets.sh put \
+  --secret-name creds-example \
+  --env-var EXAMPLE_SECRET \
+  --value 'valor-secreto' \
+  --services b2b
+
+# Verificar catálogo y mounts
+bash scripts/prod-runtime-secrets.sh verify
+bash scripts/prod-runtime-secrets.sh verify-s2s
+```
+
+El argumento `--value` puede quedar en el historial del shell; para credenciales sensibles, usar el mecanismo seguro aprobado por el equipo en vez de pegar valores en comandos o chats.
+
+Sincronización de configuración de DEV y URLs:
 
 ```bash
 pnpm env:sync:dev
 pnpm env:sync:dev -- verify
-bash scripts/sync-deploy-env.sh
 ```
 
-## Secretos (Secret Manager)
+El wrapper `scripts/sync-deploy-env.sh` usa DEV por defecto; `--prod` selecciona PROD. `pnpm env:sync:dev` corre el flujo completo de cobertura, apply de secretos/literales y URLs; `pnpm env:sync:dev -- verify` valida la cobertura y la configuración ya aplicada. Para cambios de despliegue regulares, seguir el [pipeline CI/CD](02 Pipeline de Despliegue.md).
 
-`runtime-secrets.json` enumera cada secreto con su `secretName` en Secret Manager, la variable de entorno con la que se monta y la lista de servicios que lo reciben. Ejemplos verificados en el catálogo: `creds-jwt-secret` → `JWT_SECRET` (`b2b`, `admin-back`); `creds-impersonate-internal-secret` → `IMPERSONATE_INTERNAL_SECRET` (`admin-back`, `b2b`, `webhooks`); `creds-webhook-shared-secret` → `WEBHOOK_SHARED_SECRET` (`webhooks`); `creds-truora-api-key`, `creds-zenvia-api-key`, `creds-sendgrid-api-key` (`communications`); y un grupo marcado como **no obligatorio** (`required: false`) para credenciales de Experian y Score, todos montados en `b2b`: `EXPERIAN_AUTH_CLIENT_SECRET`, `EXPERIAN_AUTH_PASSWORD` (Reconocer), `SCORE_AUTH_CLIENT_SECRET`, `SCORE_AUTH_PASSWORD`, `SCORE_PASSWORD` (HPN) y certificado, llave y claves HPJ (`EXPERIAN_HPJ_CERTIFICATE`, `EXPERIAN_HPJ_PRIVATE_KEY`, `EXPERIAN_HPJ_TOKEN_PASSWORD`, `EXPERIAN_HPJ_PASSWORD`). El nombre del secreto es el mismo en STG y PROD; el valor vive en el Secret Manager de cada proyecto. En PROD (`product-fintech`) esas versiones ya son las credenciales de producción. Las URLs, client ids y usuarios no van en Secret Manager: están en `serviceEnvLiterals.b2b` (hosts de producción) y, donde STG debe seguir en demo/UAT, se pisan con `serviceEnvLiteralsDev.b2b`. Cloud Run toma literales y `:latest` al redesplegar `b2b`.
+## URLs runtime y configuración de frontend
 
-Operación de secretos en PROD:
+Terraform compone las URLs internas usando los nombres de Cloud Run y el proyecto activo. Las llamadas internas deben seguir usando los orígenes Cloud Run apropiados; no se deben redirigir por los dominios públicos sin una decisión explícita de arquitectura.
 
-```bash
-bash scripts/prod-runtime-secrets.sh put \
-  --secret-name creds-foo \
-  --env-var FOO \
-  --value '…' \
-  --services b2b,admin-back
+Las URLs y flags declarados en `staticBuildArgs` —por ejemplo, enlaces públicos, URL de soporte y `ALLOW_SEARCH_INDEXING`— se hornean en la imagen de Next.js. Los valores públicos `NEXT_PUBLIC_*` no son secretos: el navegador puede leerlos. Si cambia un argumento de build, hay que reconstruir y desplegar la app afectada; `pnpm env:sync:dev` por sí solo no actualiza la imagen.
 
-bash scripts/prod-runtime-secrets.sh verify
-```
+Los IDs de las plantillas de correo y WhatsApp no se configuran como secretos de Cloud Run. Se resuelven desde los catálogos versionados:
 
-Los valores viven únicamente en Secret Manager; no se requiere `runtime-secrets.local.env` para desplegar en PROD (ese archivo aplica a la siembra local/STG).
-
-## Plantillas de correo y WhatsApp (no son secretos)
-
-Los IDs de plantilla de **Sendgrid** y **Zenvia** no van en Secret Manager ni como literales de Cloud Run. Viven en catálogos versionados en el código de `services/communications`:
-
-| Canal | Catálogo | Ejemplos de keys |
+| Canal | Catálogo | Archivo |
 |---|---|---|
-| Email (Sendgrid) | `src/constants/email-templates.ts` | `welcome`, `otp`, `contract`, `requestRejected` |
-| WhatsApp (Zenvia) | `src/constants/whatsapp-templates.ts` | `otp`, `signatureOtp`, `creditApproved`, `contractSigned` |
+| Email (SendGrid) | Keys de plantilla estables que resuelven a IDs y datos requeridos | [`email-templates.ts`](https://github.com/SumzCol/credits-platform/blob/main/services/communications/src/constants/email-templates.ts) |
+| WhatsApp (Zenvia) | Keys de plantilla estables que resuelven a IDs y datos requeridos | [`whatsapp-templates.ts`](https://github.com/SumzCol/credits-platform/blob/main/services/communications/src/constants/whatsapp-templates.ts) |
 
-En runtime, B2B (u otro caller) envía la **key** estable; communications resuelve el ID del proveedor. Lo que sí permanece en secretos/config de infra es la credencial (`SENDGRID_API_KEY`, `ZENVIA_API_KEY`) y el número de origen de Zenvia (`ZENVIA_PHONE_NUMBER`, literal).
+Las credenciales de proveedor sí son secretos (`SENDGRID_API_KEY`, `ZENVIA_API_KEY`). El número de origen de Zenvia es configuración literal. Para que un caller envíe una plantilla, pasa su key estable; `communications` resuelve el ID del proveedor.
 
-> **Nota (sep 2026):** los OTP de WhatsApp dejaron de leer `OTP_WHATSAPP_TEMPLATE_ID` / `SIGNATURE_OTP_WHATSAPP_TEMPLATE_ID` desde env; esos IDs pasaron al catálogo `whatsapp-templates.ts`. Las notificaciones de crédito aprobado (`creditApproved`) y contrato firmado (`contractSigned`) también viven en ese catálogo (sin variables de entorno).
+## IAM del operador
 
-## URLs entre servicios
-
-`url-bindings.json` define, por `packageDir`, qué variable de entorno recibe la URL de qué otro servicio (`from: "services.<slug>"`) o de un valor calculado (`from: "computed.<nombre>"`), con un `suffix` opcional de *path*. Ejemplos: `backends/b2b` recibe `CORE_BASE_URL`, `COMMUNICATIONS_SERVICE_URL` y `RULES_ENGINE_URL`; `apps/checkout` recibe `API_BASE_URL` y, como variable de **build-time** (`buildTime: true`, porque Next.js la *inyecta* en el bundle), `NEXT_PUBLIC_REDEMPTION_BASE_URL`.
-
-Además de los bindings, `apps/checkout` declara literales de **build-time** en `staticBuildArgs` de `dev-service-matrix.json` / `prod-service-matrix.json` (mismas URLs en STG y PROD):
-
-| Variable | Uso |
-|---|---|
-| `NEXT_PUBLIC_PERSONAL_DATA_POLICY_URL` | Footer / consentimientos → política de tratamiento de datos (Google Doc publicado) |
-| `NEXT_PUBLIC_TYC_URL` | Footer / hipervínculo de TyC → términos y condiciones (Google Doc publicado) |
-| `NEXT_PUBLIC_CUSTOMER_SERVICE_URL` | WhatsApp de soporte |
-| `ALLOW_SEARCH_INDEXING` | Indexación (`false` en STG, `true` en PROD) |
-
-Cambiar esas URLs o flags exige actualizar la matriz, rebuild de la imagen de `checkout` y redeploy; no se aplican con `pnpm env:sync:dev`.
-
-## IAM del operador (laptop)
-
-Rol custom de mínimo privilegio para ejecutar despliegues sin usar `Owner`/`Editor`/`IAM Admin`:
+El rol custom `deployEngineer` define permisos de mínimo privilegio para operaciones desde laptop en STG/DEV (`product-fintech-dev`), sin recurrir a `Owner`, `Editor` o administrador IAM del proyecto:
 
 ```bash
-bash scripts/create-deploy-engineer-role.sh                       # crea/actualiza el rol
-bash scripts/create-deploy-engineer-role.sh --bind user:you@sumz.co  # lo asigna a un usuario
+bash scripts/create-deploy-engineer-role.sh
+bash scripts/create-deploy-engineer-role.sh --bind user:you@example.com
 ```
 
-Los permisos están versionados en `config/deploy/iam-deploy-engineer-role.yaml`; si un paso de despliegue falla con `403`, el permiso puntual se agrega ahí y se re-corre el script. Alternativa (más amplia, marcada como *legacy*): `bash scripts/mirror-iam-prod-to-dev.sh`, que copia los roles IAM de un usuario desde PROD hacia STG.
+La lista versionada de permisos está en [`iam-deploy-engineer-role.yaml`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/iam-deploy-engineer-role.yaml). Si un paso falla por permisos, confirmar primero que el proyecto y el entorno activos son los correctos; agregar solo el permiso necesario al rol y volver a ejecutar el script.
 
-## Salud del sistema (panel admin)
+## Cobertura y salud
 
-La vista **System → Health** del panel admin llama a `admin-back` (`GET /api/v1/system/core-health`), que prueba la flota interna (backends/servicios/apps) con `authenticatedFetch` (token IAM en STG). Los orígenes vienen de las variables de `admin-back` (local: `dev.sh` + `.env`; STG: `url-bindings.json`). Si falta un origen, ese chequeo se marca **omitido**, no fallido. La lógica de Experian/Score corre dentro de `b2b` (cubierta por el *probe* `b2b-backend`).
+La cobertura de variables se verifica con `verify_deploy_env_coverage.py`. La existencia de secretos montados se valida por separado con `check-runtime-secrets.py` en los workflows antes del apply. Son controles distintos: uno detecta variables de entorno sin fuente de configuración y el otro comprueba que existan en GCP los secretos que la flota montará.
+
+El panel **System → Health** consulta `admin-back` (`GET /api/v1/system/core-health`) para probar la flota. Los orígenes faltantes pueden quedar como omitidos; una verificación de health no sustituye los gates de cobertura de env ni la validación de secretos.

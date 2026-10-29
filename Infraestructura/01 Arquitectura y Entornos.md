@@ -1,95 +1,229 @@
 # Arquitectura y entornos
 
-## Proveedor y proyectos GCP
+Resumen de la infraestructura desplegada en Google Cloud Platform (GCP), sus entornos y las rutas principales de tráfico. Los archivos de configuración son la fuente de verdad para proyectos, servicios, capacidad, dominios y secretos.
 
-Toda la infraestructura corre en **Google Cloud Platform**, con dos proyectos completamente aislados entre sí (sin compartir Cloud SQL, Secret Manager, Artifact Registry ni service accounts):
+## Entornos y aislamiento
 
-| | **PROD** | **STG / demo** |
+PROD y STG/DEV son proyectos GCP distintos. Cada entorno mantiene sus propios recursos de Cloud SQL, Artifact Registry, Secret Manager, Cloud Run y service accounts. Los nombres de runtime service accounts pueden coincidir, pero sus identidades y permisos están dentro del proyecto correspondiente.
+
+| | **PROD** | **STG / DEV** |
 |---|---|---|
 | Proyecto GCP | `product-fintech` | `product-fintech-dev` |
 | Región | `us-central1` | `us-central1` |
-| Prefijo de recursos | `creds-*` | `creds-*-dev` |
-| Variable `ENVIRONMENT` de la app | `prod` | `staging` |
-| Matriz de servicios | `config/deploy/prod-service-matrix.json` | `config/deploy/dev-service-matrix.json` |
-| Secret GitHub (SA deployer) | `GCP_SA_KEY` | `GCP_SA_KEY_DEV` |
-| Instancia Cloud SQL | `creds-prod-pg` | `creds-dev-pg` (`db-f1-micro`) |
+| Matriz de servicios | [`prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json) | [`dev-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/dev-service-matrix.json) |
+| Configuración GCP local | [`gcp-prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-prod.env) | [`gcp-dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-dev.env) |
+| Cloud SQL | `creds-prod-pg` | `creds-dev-pg` (`db-f1-micro`) |
+| Firebase Hosting default | `creds-prod.web.app` | `creds-dev.web.app` |
+| Variable `ENVIRONMENT` | `prod` | `staging` |
+| Workflow de deploy | `PROD - deploy` | `DEV - deploy` |
 
-Los scripts fijan el contexto activo (`pin_prod_deploy_context` / `pin_dev_deploy_context`) y verifican que la matriz coincida con el `projectId` del entorno activo antes de tocar Cloud Run, evitando cruzar recursos de un proyecto con el otro.
+```mermaid
+flowchart LR
+    subgraph PROD["PROD · product-fintech · us-central1"]
+        PSQL["Cloud SQL<br/>creds-prod-pg"]
+        PAR["Artifact Registry<br/>creds-platform-repo"]
+        PSM["Secret Manager<br/>creds-prod-*"]
+        PCR["Cloud Run<br/>creds-*-prod"]
+        PFB["Firebase Hosting<br/>creds-prod"]
+        PJ["Cloud Run Jobs<br/>creds-migrate-prod<br/>creds-jobs-prod"]
+    end
 
-## Componentes cloud (PROD)
+    subgraph STG["STG / DEV · product-fintech-dev · us-central1"]
+        DSQL["Cloud SQL<br/>creds-dev-pg"]
+        DAR["Artifact Registry<br/>creds-platform-repo"]
+        DSM["Secret Manager<br/>creds-dev-*"]
+        DCR["Cloud Run<br/>creds-*-dev"]
+        DFB["Firebase Hosting<br/>creds-dev"]
+    end
 
-```text
-product-fintech
-├── Cloud SQL          creds-prod-pg (5 bases de datos lógicas)
-├── Artifact Registry  creds-platform-repo
-├── Secret Manager     DB, JWT, webhooks, communications, Slack ops, registro de URLs, …
-├── Cloud Run Job      creds-migrate-prod        (migraciones TypeORM)
-├── Cloud Run Job      creds-jobs-prod           (+ Cloud Scheduler por JOB_NAME)
-└── Cloud Run (~9 servicios) *.run.app
-    ├── acceso público   webhooks, b2b, admin-back, checkout, redemption, admin
-    └── acceso IAM       rules-engine, core (backends/core), communications
+    PFB --> PCR
+    PCR --> PSQL
+    PJ --> PSQL
+    PAR -. despliega imágenes .-> PCR
+    PSM -. inyecta configuración .-> PCR
+    PSM -. inyecta configuración .-> PJ
+
+    DFB --> DCR
+    DCR --> DSQL
+    DAR -. despliega imágenes .-> DCR
+    DSM -. inyecta configuración .-> DCR
 ```
 
-## Flota de servicios (matriz PROD)
+Los scripts de deploy fijan el proyecto esperado mediante `pin_prod_deploy_context` o `pin_dev_deploy_context` y validan que coincida con `projectId` de la matriz. Esto evita aplicar cambios a un proyecto distinto del entorno seleccionado. No se deben apuntar servicios de un proyecto a bases de datos, secretos o imágenes del otro.
 
-`config/deploy/prod-service-matrix.json` define, por servicio: directorio del paquete, imagen de Artifact Registry, nombre del servicio Cloud Run, tipo (`node` / `next`), *tier* de capacidad, service account de runtime, tipo de acceso, ruta de health check y base de datos lógica asociada. El campo `deployOrder` fija el orden de despliegue de la flota:
+## Entrada pública y llamadas entre servicios
 
-| Slug | Paquete | Tipo | Tier | Acceso | Service Account runtime | Base de datos |
-|---|---|---|---|---|---|---|
-| `rules-engine` | `services/rules-engine` | node | B | IAM | `creds-runtime-product` | `rules-engine` |
-| `core` | `backends/core` | node | A | IAM | `creds-runtime-core` | `fliipa_banking_core` |
-| `communications` | `services/communications` | node | C | IAM | `creds-runtime-product` | `communications` |
-| `webhooks` | `services/webhooks` | node | B | público | `creds-runtime-public` | — |
-| `b2b` | `backends/b2b` | node | A | público | `creds-runtime-public` | `fliipa_b2b` (incluye `product_settings`) |
-| `admin-back` | `backends/admin` | node | B | público | `creds-runtime-public` | `fliipa_banking_core` (settings de crédito/core; settings de producto vía S2S a b2b) |
-| `checkout` | `apps/checkout` | Next.js | A | público | `creds-runtime-public` | — |
-| `redemption` | `apps/redemption` | Next.js | A | público | `creds-runtime-public` | — |
-| `admin` | `apps/admin` | Next.js | B | público | `creds-runtime-public` | — |
+Firebase Hosting es el front door configurado actualmente; no hay un HTTPS Load Balancer de GCP delante de la flota. En PROD, los dominios personalizados se configuran en [`domains.prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.prod.env). Firebase Hosting reescribe las solicitudes hacia los servicios Cloud Run correspondientes.
 
-Los servicios con acceso **IAM** (`rules-engine`, `core`, `communications`) no son invocables públicamente: solo aceptan llamadas de otros servicios cuya service account esté en su lista `invokers`, usando `authenticatedFetch` (ID token) desde `packages/kernel`. Los servicios **públicos** exponen su health check bajo `*.run.app`.
+| Host PROD | Servicio / rutas |
+|---|---|
+| `https://fliipa.com` | Checkout en `/` |
+| `https://apps.fliipa.com` | Admin en `/admin`; redemption en `/redemption` |
+| `https://api.fliipa.com` | B2B en `/api/v1/*`; admin-back en `/admin/api/v1/*`; webhooks en `/api/v1/webhooks/*` |
+| `https://creds-prod.web.app` | Host default de Firebase Hosting; conserva `/admin` en paralelo |
 
-Los *tiers* de capacidad (`A`, `B`, `C`) fijan `minInstances`/`maxInstances`/`concurrency`/`cpu`/`memory`/`timeout` en `prod-service-matrix.json`; se aplican en cada `pdeploy` / workflow y pueden sobreescribirse por servicio (por ejemplo `admin-back` fuerza `minInstances: 0`).
+STG/DEV sigue el mismo esquema usando `dev.fliipa.com`, `dev-apps.fliipa.com` y `dev-api.fliipa.com`, además del host default `creds-dev.web.app`. Los orígenes están definidos en [`domains.dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.dev.env).
 
-En STG (`dev-service-matrix.json`) todos los servicios usan el tier `cheap` (min `0`, max `2`, cpu `1`, memoria `512Mi`, *scale-to-zero*) y Cloud SQL es `db-f1-micro` (~25 conexiones), por lo que los *pool sizes* de base de datos deben mantenerse bajos (`DB_POOL_MAX=2–3`) para no agotar conexiones.
+```mermaid
+flowchart TB
+    CLIENT["Navegador / integraciones"]
+    FBROOT["Firebase Hosting · root<br/>fliipa.com"]
+    FBWEB["Firebase Hosting · web<br/>apps.fliipa.com"]
+    FBAPI["Firebase Hosting · api<br/>api.fliipa.com"]
 
-## Mapa código ↔ cloud
+    CHECKOUT["Cloud Run · checkout"]
+    ADMIN["Cloud Run · admin"]
+    REDEMPTION["Cloud Run · redemption"]
+    B2B["Cloud Run · b2b"]
+    ADMINBACK["Cloud Run · admin-back"]
+    WEBHOOKS["Cloud Run · webhooks"]
+
+    CLIENT --> FBROOT --> CHECKOUT
+    CLIENT --> FBWEB --> ADMIN
+    FBWEB --> REDEMPTION
+    CLIENT --> FBAPI --> B2B
+    FBAPI --> ADMINBACK
+    FBAPI --> WEBHOOKS
+
+    B2B -->|"S2S · IAM + secreto interno"| CORE["Cloud Run · core"]
+    B2B -->|"S2S · IAM + secreto interno"| RULES["Cloud Run · rules-engine"]
+    B2B -->|"S2S · IAM + secreto interno"| COMMS["Cloud Run · communications"]
+    ADMINBACK -->|"S2S · IAM + secreto interno"| CORE
+    ADMINBACK -->|"S2S · IAM + secreto interno"| RULES
+    WEBHOOKS -->|"S2S · IAM + secreto interno"| B2B
+
+    CORE --> SQLCORE[("Cloud SQL<br/>fliipa_banking_core")]
+    B2B --> SQLB2B[("Cloud SQL<br/>fliipa_b2b")]
+    RULES --> SQLRULES[("Cloud SQL<br/>rules-engine")]
+    COMMS --> SQLCOMMS[("Cloud SQL<br/>communications")]
+    ADMINBACK --> SQLCORE
+```
+
+`core`, `rules-engine` y `communications` usan acceso Cloud Run IAM y no deben exponerse a través del proxy público. Las llamadas servicio-a-servicio autentican con ID token mediante `authenticatedFetch` y agregan `X-Internal-Service-Secret` como defensa adicional. El detalle de configuración, secretos y enrutamiento está en [Configuración, variables de entorno y secretos](03 Configuracion y Secretos.md) y [Dominios públicos y Load Balancer](05 Dominio y Load Balancer.md).
+
+> **Ruteo:** usar rutas concretas por servicio. No enviar un `/api/**` genérico a varios backends ni publicar los servicios IAM detrás de Firebase Hosting.
+
+## Componentes cloud de PROD
+
+| Componente | Recursos / función |
+|---|---|
+| Cloud SQL | Instancia `creds-prod-pg`, PostgreSQL con cuatro bases lógicas |
+| Artifact Registry | `creds-platform-repo`, imágenes de los servicios |
+| Secret Manager | Secretos de runtime y registro de URLs |
+| Cloud Run services | Nueve servicios definidos en la matriz PROD |
+| Cloud Run Jobs | `creds-migrate-prod` para migraciones; `creds-jobs-prod` para tareas batch |
+| Cloud Scheduler | Ejecuta el job batch con overrides de `JOB_NAME` |
+| Firebase Hosting | Sitios `root`, `web` y `api` para los dominios públicos |
+
+Bases lógicas predeterminadas en `terraform/modules/cloud_sql`:
+
+| Base de datos | Consumidores principales |
+|---|---|
+| `fliipa_banking_core` | `backends/core` y `backends/admin` (admin-back) |
+| `fliipa_b2b` | `backends/b2b`; incluye `product_settings` |
+| `rules-engine` | `services/rules-engine` |
+| `communications` | `services/communications` |
+
+El nombre de una base de datos no implica una instancia compartida entre entornos: PROD utiliza `creds-prod-pg` y STG/DEV `creds-dev-pg`.
+
+## Flota de servicios PROD
+
+[`prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json) define paquete, imagen, nombre Cloud Run, tier, acceso, service account de runtime, health check, base de datos e invocadores. El orden de despliegue está en `deployOrder`.
+
+| Slug | Paquete | Cloud Run | Tipo | Tier | Acceso | Runtime SA | Base de datos |
+|---|---|---|---|---|---|---|---|
+| `rules-engine` | `services/rules-engine` | `creds-rules-engine-prod` | Node | medium | IAM | `creds-runtime-product` | `rules-engine` |
+| `core` | `backends/core` | `creds-core-prod` | Node | production | IAM | `creds-runtime-core` | `fliipa_banking_core` |
+| `communications` | `services/communications` | `creds-communications-prod` | Node | medium | IAM | `creds-runtime-product` | `communications` |
+| `webhooks` | `services/webhooks` | `creds-webhooks-prod` | Node | cheap | público | `creds-runtime-public` | — |
+| `b2b` | `backends/b2b` | `creds-b2b-prod` | Node | production | público | `creds-runtime-public` | `fliipa_b2b` |
+| `admin-back` | `backends/admin` | `creds-admin-back-prod` | Node | medium | público | `creds-runtime-public` | `fliipa_banking_core` |
+| `checkout` | `apps/checkout` | `creds-checkout-prod` | Next.js | production | público | `creds-runtime-public` | — |
+| `redemption` | `apps/redemption` | `creds-redemption-prod` | Next.js | production | público | `creds-runtime-public` | — |
+| `admin` | `apps/admin` | `creds-admin-prod` | Next.js | cheap | público | `creds-runtime-public` | — |
+
+Los tiers fijan los valores predeterminados de escalado y recursos; la matriz también permite overrides por servicio:
+
+| Tier | Min / max instances | Concurrency | CPU | Memoria | Timeout |
+|---|---:|---:|---:|---:|---:|
+| `production` | 2 / 20 | 50 | 2 | 1 GiB | 60 s |
+| `medium` | 1 / 10 | 50 | 1 | 512 MiB | 60 s |
+| `cheap` | 0 / 2 | 20 | 1 | 512 MiB | 60 s |
+
+En STG/DEV, todos los servicios usan `cheap` por defecto (scale-to-zero). Cloud SQL usa `db-f1-micro` (~25 conexiones), así que los pools deben mantenerse bajos (`DB_POOL_MAX=2–3`). Ver [Pipeline de despliegue](02 Pipeline de Despliegue.md) y [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md).
+
+## Jobs y migraciones
+
+`creds-migrate-prod` ejecuta migraciones TypeORM. `creds-jobs-prod` empaqueta handlers batch; Cloud Scheduler lo invoca y configura `JOB_NAME` para seleccionar el handler.
+
+```mermaid
+sequenceDiagram
+    participant S as Cloud Scheduler
+    participant J as Cloud Run Job<br/>creds-jobs-prod
+    participant DB as Cloud SQL
+    participant B as Cloud Run<br/>servicios requeridos
+    participant A as Alertas operativas
+
+    S->>J: Ejecutar con JOB_NAME
+    J->>DB: Leer / procesar datos
+    J->>B: Llamadas HTTP según el job
+    B-->>J: Resultado
+    J->>A: Estado y resumen de ejecución
+```
+
+Configuración y operación de jobs: [`scripts/provision-prod-jobs.sh`](https://github.com/SumzCol/credits-platform/blob/main/scripts/provision-prod-jobs.sh), [`scripts/provision-prod-jobs-schedulers.sh`](https://github.com/SumzCol/credits-platform/blob/main/scripts/provision-prod-jobs-schedulers.sh), [Jobs batch y migraciones](04 Jobs y Migraciones.md) y [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md). Los Jobs no forman parte de la matriz de servicios Cloud Run.
+
+## Despliegue y mapa código ↔ cloud
+
+Los workflows de GitHub Actions usan Workload Identity Federation. Los despliegues declarativos de infraestructura usan Terraform/OpenTofu; los scripts de entorno son wrappers y runbooks para operaciones manuales y tareas de soporte.
 
 ```text
 config/deploy/
-  gcp-prod.env                 PROJECT_ID, REGION, ARTIFACT_REPO
-  domains.prod.env             switch de dominio (hoy DEPLOY_PHASE=1)
-  prod-service-matrix.json     flota Cloud Run (orden, tiers, health, SA)
-  service-catalog.json         slug → packageDir / cloudRun
-  url-bindings.json            variables de URL entre servicios
-  runtime-secrets.json         catálogo Secret Manager → mounts
+  gcp-prod.env                    Proyecto/región y nombres base de PROD
+  gcp-dev.env                     Proyecto/región y nombres base de STG/DEV
+  domains.prod.env                Orígenes y paths públicos de PROD
+  domains.dev.env                 Orígenes y paths públicos de STG/DEV
+  prod-service-matrix.json        Flota, capacidad, IAM y orden de PROD
+  dev-service-matrix.json         Flota, capacidad, IAM y orden de STG/DEV
+  service-catalog.json            Slug → paquete / Cloud Run
+  url-bindings.json               Variables de URL servicio-a-servicio
+  runtime-secrets.json            Catálogo Secret Manager → servicios
+
+terraform/
+  bootstrap/                      APIs, state, WIF y recursos iniciales
+  modules/                        Cloud SQL, Cloud Run, Firebase Hosting, IAM
+  envs/prod/                      Infraestructura declarativa de PROD
+  envs/dev/                       Infraestructura declarativa de STG/DEV
 
 scripts/
-  pdeploy-prod.sh              deploy manual / scaffold
-  prod-runtime-secrets.sh      put | verify secretos
-  prod-urls.sh                 sync → apply → verify
-  pause|resume-prod-cloud-run  costo diario
-  run-prod-seeds.sh            seeds de admin + settings de core (kernel);
-                               seeds de producto (`product_settings`) viven en b2b
-  provision-prod-jobs.sh       Cloud Run Job creds-jobs-prod
+  pdeploy-prod.sh                 Deploy manual PROD
+  deploy-dev.sh                   Deploy manual STG/DEV
+  prod-runtime-secrets.sh         Gestión/verificación de secretos PROD
+  prod-urls.sh                    Sync y verificación de URLs PROD
+  provision-prod-jobs.sh          Cloud Run Job batch PROD
   provision-prod-jobs-schedulers.sh  Cloud Scheduler → JOB_NAME
 
-.github/workflows/creds-*-prod.yml     mismo resultado que pdeploy, por servicio
-.github/workflows/creds-jobs-prod.yml  job batch + schedulers
-
-packages/kernel/.../cloud-run-fetch.ts  ID token para llamadas servicio-a-servicio
-apps/*/next.config.*                   basePath /checkout | /redemption | /admin
+.github/workflows/
+  prod-deploy.yml                 Workflow PROD
+  dev-deploy.yml                  Workflow STG/DEV
+  dev-rollback.yml                Rollback STG/DEV
+  dev-db-restore.yml              Restore de base de datos STG/DEV
 ```
 
-Runtime service accounts: `creds-runtime-{public,core,hub,product}@…`. GitHub usa el secret `GCP_SA_KEY` (SA `creds-deployer@product-fintech`) para PROD y `GCP_SA_KEY_DEV` para STG (SA deployer en `product-fintech-dev`).
+Referencias operativas:
 
-## Qué falta (estado a la fecha de esta revisión)
+- [Pipeline de despliegue](02 Pipeline de Despliegue.md)
+- [Configuración, variables de entorno y secretos](03 Configuracion y Secretos.md)
+- [Jobs batch y migraciones de base de datos](04 Jobs y Migraciones.md)
+- [Dominios públicos y Load Balancer](05 Dominio y Load Balancer.md)
+- [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md)
 
-| Pieza | ¿Bloquea las URLs `*.run.app` actuales? |
-|---|---|
-| Custodia de DNS + cutover de Webflow | No |
-| Load Balancer + NEGs + certificados + DNS → IP del LB | No (sí es necesario para `fliipa.com`) |
-| `DEPLOY_PHASE=F` + rebuild de frontends | No |
-| Secretos reales de Experian / Score | No (hoy son *placeholders*) |
-| Registro de webhooks de terceros con el dominio final | No |
+## Fuentes de verdad
 
-Ver detalle en [Dominio y Load Balancer](05 Dominio y Load Balancer.md) y en [Operación y pendientes](06 Operacion y Pendientes.md).
+Si la documentación y la configuración discrepan, verificar primero estos archivos antes de desplegar:
+
+1. Proyectos y recursos base: [`gcp-prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-prod.env), [`gcp-dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-dev.env).
+2. Servicios y capacidad: [`prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json), [`dev-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/dev-service-matrix.json).
+3. Orígenes públicos: [`domains.prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.prod.env), [`domains.dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.dev.env).
+4. Secretos y mounts: [`runtime-secrets.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/runtime-secrets.json).
+5. Infraestructura declarativa: [`terraform/envs/prod`](https://github.com/SumzCol/credits-platform/tree/main/terraform/envs/prod), [`terraform/envs/dev`](https://github.com/SumzCol/credits-platform/tree/main/terraform/envs/dev).
