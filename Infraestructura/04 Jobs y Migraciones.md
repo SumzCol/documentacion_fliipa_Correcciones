@@ -2,7 +2,7 @@
 
 ## Jobs batch (`jobs/`)
 
-El paquete `@credits-platform/jobs` se compila como una imagen y se ejecuta en el Cloud Run Job PROD `creds-jobs-prod`. La variable `JOB_NAME` selecciona el handler que corre en cada ejecución. El registro vigente está en [`jobs/src/handlers/index.ts`](../../jobs/src/handlers/index.ts).
+El paquete `@credits-platform/jobs` se compila como una imagen y se ejecuta en el Cloud Run Job PROD `creds-jobs-prod`. La variable `JOB_NAME` selecciona el handler que corre en cada ejecución. El registro vigente está en [`jobs/src/handlers/index.ts`](https://github.com/SumzCol/credits-platform/blob/main/jobs/src/handlers/index.ts).
 
 ```text
 jobs/
@@ -23,10 +23,10 @@ Los handlers registrados actualmente son:
 
 | `JOB_NAME` | Handler | Scheduler PROD | Función |
 |---|---|---|---|
-| `auto-debit` | [`auto-debit.ts`](../../jobs/src/handlers/auto-debit.ts) | `creds-jobs-auto-debit`, `0 7 * * *` (`America/Bogota`) | Calcula el funnel diario y, si `auto_debit_send_enabled` está activo, envía los candidatos al endpoint B2B configurado |
-| `credit-state-ledger` | [`credit-state-ledger.ts`](../../jobs/src/handlers/credit-state-ledger.ts) | `creds-jobs-credit-state-ledger`, `0 0 * * *` (`America/Bogota`) | Calcula y persiste cambios del estado de crédito; exporta a BigQuery y repara filas faltantes si la configuración está habilitada |
+| `auto-debit` | [`auto-debit.ts`](https://github.com/SumzCol/credits-platform/blob/main/jobs/src/handlers/auto-debit.ts) | `creds-jobs-auto-debit`, `0 7 * * *` (`America/Bogota`) | Calcula el funnel diario y, si `auto_debit_send_enabled` está activo, envía los candidatos al endpoint B2B configurado |
+| `credit-state-ledger` | [`credit-state-ledger.ts`](https://github.com/SumzCol/credits-platform/blob/main/jobs/src/handlers/credit-state-ledger.ts) | `creds-jobs-credit-state-ledger`, `0 0 * * *` (`America/Bogota`) | Calcula y persiste cambios del estado de crédito; exporta a BigQuery y repara filas faltantes si la configuración está habilitada |
 
-Las entradas de scheduler están versionadas en [`scripts/provision-prod-jobs-schedulers.sh`](../../scripts/provision-prod-jobs-schedulers.sh) como `nombre|JOB_NAME|cron`. La zona horaria se controla con `JOBS_SCHEDULER_TZ` y por defecto es `America/Bogota`. Actualmente PROD tiene dos schedulers; **no** hay schedulers batch provisionados en STG/DEV.
+Las entradas de scheduler están versionadas en [`scripts/provision-prod-jobs-schedulers.sh`](https://github.com/SumzCol/credits-platform/blob/main/scripts/provision-prod-jobs-schedulers.sh) como `nombre|JOB_NAME|cron`. La zona horaria se controla con `JOBS_SCHEDULER_TZ` y por defecto es `America/Bogota`. Actualmente PROD tiene dos schedulers; **no** hay schedulers batch provisionados en STG/DEV.
 
 ```mermaid
 flowchart LR
@@ -72,7 +72,7 @@ pnpm exec tsx --env-file=.env src/cli.ts --job=credit-state-ledger
 JOB_NAME=credit-state-ledger pnpm start
 ```
 
-Los nombres disponibles se pueden consultar en [`jobs/src/handlers/index.ts`](../../jobs/src/handlers/index.ts). El paquete necesita conexión a las bases que usa el handler; en producción, la exportación del ledger a BigQuery requiere la configuración `CREDIT_LEDGER_BQ_*` y permisos para el runtime service account.
+Los nombres disponibles se pueden consultar en [`jobs/src/handlers/index.ts`](https://github.com/SumzCol/credits-platform/blob/main/jobs/src/handlers/index.ts). El paquete necesita conexión a las bases que usa el handler; en producción, la exportación del ledger a BigQuery requiere la configuración `CREDIT_LEDGER_BQ_*` y permisos para el runtime service account.
 
 ### Aprovisionar y ejecutar en PROD
 
@@ -92,21 +92,21 @@ gcloud run jobs execute creds-jobs-prod \
 
 Para ejecutar otro handler, cambiar `JOB_NAME`. El horario vive en Cloud Scheduler, no en la imagen: cambiar únicamente un cron requiere volver a ejecutar el script de schedulers, no reconstruir el Job.
 
-El Job se conecta a Cloud SQL PROD, usa `creds-runtime-product` como runtime service account y tiene timeout configurado por [`scripts/provision-prod-jobs.sh`](../../scripts/provision-prod-jobs.sh). Para cambios de código en `jobs/` o en paquetes que la imagen consume, volver a construir/publicar con ese script. Los jobs no forman parte de las matrices de Cloud Run services.
+El Job se conecta a Cloud SQL PROD, usa `creds-runtime-product` como runtime service account y tiene timeout configurado por [`scripts/provision-prod-jobs.sh`](https://github.com/SumzCol/credits-platform/blob/main/scripts/provision-prod-jobs.sh). Para cambios de código en `jobs/` o en paquetes que la imagen consume, volver a construir/publicar con ese script. Los jobs no forman parte de las matrices de Cloud Run services.
 
 ### Añadir un handler
 
 1. Crear `jobs/src/handlers/<nombre>.ts` y exportar un `JobDefinition`.
-2. Registrarlo en [`jobs/src/handlers/index.ts`](../../jobs/src/handlers/index.ts).
-3. Añadir una fila a `JOB_SCHEDULES` en [`scripts/provision-prod-jobs-schedulers.sh`](../../scripts/provision-prod-jobs-schedulers.sh) si debe ejecutarse periódicamente.
+2. Registrarlo en [`jobs/src/handlers/index.ts`](https://github.com/SumzCol/credits-platform/blob/main/jobs/src/handlers/index.ts).
+3. Añadir una fila a `JOB_SCHEDULES` en [`scripts/provision-prod-jobs-schedulers.sh`](https://github.com/SumzCol/credits-platform/blob/main/scripts/provision-prod-jobs-schedulers.sh) si debe ejecutarse periódicamente.
 4. Publicar la imagen con `bash scripts/provision-prod-jobs.sh`.
 5. Aplicar los schedulers con `bash scripts/provision-prod-jobs-schedulers.sh` y validar una ejecución manual.
 
-El cambio de código requiere imagen nueva; un cambio de cron o de `JOB_NAME` requiere actualizar el scheduler. Para saber qué desplegar, consultar la sección **Batch jobs** en [Checklist de release](./ship-checklist.md).
+El cambio de código requiere imagen nueva; un cambio de cron o de `JOB_NAME` requiere actualizar el scheduler. Para saber qué desplegar en cada entorno, consultar [Pipeline de despliegue](02 Pipeline de Despliegue.md) y [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md).
 
 ## Migraciones de base de datos
 
-Las migraciones TypeORM se ejecutan como un Cloud Run Job independiente del paquete batch: `creds-migrate-prod` en PROD y `creds-migrate-dev` en STG/DEV. La imagen se construye desde [`infra/migrate/Dockerfile`](../../infra/migrate/Dockerfile) y ejecuta [`scripts/migrate-prod-packages.sh`](../../scripts/migrate-prod-packages.sh), que procesa en orden los paquetes que tengan el script `migration:run`:
+Las migraciones TypeORM se ejecutan como un Cloud Run Job independiente del paquete batch: `creds-migrate-prod` en PROD y `creds-migrate-dev` en STG/DEV. La imagen se construye desde [`infra/migrate/Dockerfile`](https://github.com/SumzCol/credits-platform/blob/main/infra/migrate/Dockerfile) y ejecuta [`scripts/migrate-prod-packages.sh`](https://github.com/SumzCol/credits-platform/blob/main/scripts/migrate-prod-packages.sh), que procesa en orden los paquetes que tengan el script `migration:run`:
 
 | Paquete | Base de datos |
 |---|---|
@@ -127,11 +127,11 @@ El orden del proceso en CI/CD es:
 6. Aplicar OpenTofu de forma dirigida para el Job de migración y ejecutarlo con `gcloud run jobs execute`.
 7. Aplicar el resto de la infraestructura y los servicios.
 
-Los workflows vigentes son manuales (`workflow_dispatch`): [PROD deploy](../../.github/workflows/prod-deploy.yml) y [DEV deploy](../../.github/workflows/dev-deploy.yml). La antigua referencia a `stg-deploy.yml` ya no aplica. Ver el detalle de inputs y comandos en [Pipeline CI/CD](./deployment-pipeline.md).
+Los workflows vigentes son manuales (`workflow_dispatch`): [PROD deploy](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/prod-deploy.yml) y [DEV deploy](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/dev-deploy.yml). La antigua referencia a `stg-deploy.yml` ya no aplica. Ver el detalle de inputs y comandos en [Pipeline CI/CD](02 Pipeline de Despliegue.md).
 
 ### Ejecución local/manual
 
-Para PROD existe el wrapper [`scripts/run-prod-migrations.sh`](../../scripts/run-prod-migrations.sh). Requiere que el operador inicie previamente el Cloud SQL Auth Proxy; el script valida la conectividad, obtiene las credenciales de Secret Manager si no se proporcionaron y ejecuta las migraciones:
+Para PROD existe el wrapper [`scripts/run-prod-migrations.sh`](https://github.com/SumzCol/credits-platform/blob/main/scripts/run-prod-migrations.sh). Requiere que el operador inicie previamente el Cloud SQL Auth Proxy; el script valida la conectividad, obtiene las credenciales de Secret Manager si no se proporcionaron y ejecuta las migraciones:
 
 ```bash
 # En otra terminal, iniciar el proxy (prerrequisito):
@@ -147,4 +147,4 @@ En STG/DEV, usar el workflow `DEV - deploy` con `migrate=auto` o `migrate=on`; d
 
 ### Rollback de migraciones
 
-Un rollback de aplicación no revierte automáticamente un cambio de esquema. PROD no tiene un workflow de restore de base de datos; los snapshots se exportan al bucket indicado antes de migrar. STG/DEV tiene [`dev-db-restore.yml`](../../.github/workflows/dev-db-restore.yml) para restaurar snapshots del entorno. Antes de recuperar, revisar compatibilidad entre la versión de aplicación y el esquema restaurado. Más información: [Pipeline CI/CD](./deployment-pipeline.md) y [Staging / demo](./dev-staging.md).
+Un rollback de aplicación no revierte automáticamente un cambio de esquema. PROD no tiene un workflow de restore de base de datos; los snapshots se exportan al bucket indicado antes de migrar. STG/DEV tiene [`dev-db-restore.yml`](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/dev-db-restore.yml) para restaurar snapshots del entorno. Antes de recuperar, revisar compatibilidad entre la versión de aplicación y el esquema restaurado. Más información: [Pipeline CI/CD](02 Pipeline de Despliegue.md) y [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md).

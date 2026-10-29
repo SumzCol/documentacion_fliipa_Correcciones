@@ -4,8 +4,8 @@ Este documento describe los flujos de despliegue vigentes para PROD y STG/DEV. L
 
 La matriz de cada entorno es la fuente de verdad para servicios, nombres Cloud Run, capacidad y configuración:
 
-- PROD: [`config/deploy/prod-service-matrix.json`](../../config/deploy/prod-service-matrix.json)
-- STG/DEV: [`config/deploy/dev-service-matrix.json`](../../config/deploy/dev-service-matrix.json)
+- PROD: [`config/deploy/prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json)
+- STG/DEV: [`config/deploy/dev-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/dev-service-matrix.json)
 
 ## Resumen del flujo
 
@@ -38,8 +38,8 @@ Los pasos de migración se ejecutan solamente cuando la detección determina `ru
 
 | Entorno | Workflow | Archivo | Ejecución |
 |---|---|---|---|
-| PROD | `PROD - deploy` | [`prod-deploy.yml`](../../.github/workflows/prod-deploy.yml) | Manual, con `workflow_dispatch` |
-| STG/DEV | `DEV - deploy` | [`dev-deploy.yml`](../../.github/workflows/dev-deploy.yml) | Manual, con `workflow_dispatch` |
+| PROD | `PROD - deploy` | [`prod-deploy.yml`](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/prod-deploy.yml) | Manual, con `workflow_dispatch` |
+| STG/DEV | `DEV - deploy` | [`dev-deploy.yml`](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/dev-deploy.yml) | Manual, con `workflow_dispatch` |
 
 No hay un workflow vigente por servicio ni deploy automático por push. Para iniciar un despliegue desde GitHub CLI:
 
@@ -78,7 +78,7 @@ gh workflow run dev-deploy.yml -f slugs=b2b,admin-back -f migrate=auto
 gh workflow run prod-deploy.yml -f slugs=all -f migrate=off
 ```
 
-`auto` compara los cambios contra el tag del último despliegue exitoso (`dev-deployed` o `prod-deployed`), para incluir commits acumulados desde esa ejecución. Los cambios compartidos —por ejemplo en `packages/`, lockfile o configuración del grafo de build— pueden seleccionar toda la flota. Los cambios bajo `terraform/` pueden ejecutar el apply sin reconstruir imágenes. La lógica está en [`scripts/detect-changed-services.py`](../../scripts/detect-changed-services.py).
+`auto` compara los cambios contra el tag del último despliegue exitoso (`dev-deployed` o `prod-deployed`), para incluir commits acumulados desde esa ejecución. Los cambios compartidos —por ejemplo en `packages/`, lockfile o configuración del grafo de build— pueden seleccionar toda la flota. Los cambios bajo `terraform/` pueden ejecutar el apply sin reconstruir imágenes. La lógica está en [`scripts/detect-changed-services.py`](https://github.com/SumzCol/credits-platform/blob/main/scripts/detect-changed-services.py).
 
 La migración automática aplica a los paquetes de base de datos `b2b`, `communications` y `rules-engine`; el workflow también puede forzarla con `migrate=on`. Antes de migrar, se crean snapshots de las bases de datos del entorno en el bucket de snapshots correspondiente. Después se ejecuta `creds-migrate-prod` o `creds-migrate-dev`.
 
@@ -107,7 +107,7 @@ bash scripts/pdeploy-prod.sh checkout --force
 bash scripts/pdeploy-prod.sh --package apps/nuevo
 ```
 
-`pdeploy-prod.sh` fija el contexto PROD (`product-fintech`) y ejecuta el bootstrap/deploy definido por los scripts del repositorio. Para el pipeline de GitHub, usar [`prod-deploy.yml`](../../.github/workflows/prod-deploy.yml); no hay workflows `creds-*-prod.yml` separados por servicio.
+`pdeploy-prod.sh` fija el contexto PROD (`product-fintech`) y ejecuta el bootstrap/deploy definido por los scripts del repositorio. Para el pipeline de GitHub, usar [`prod-deploy.yml`](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/prod-deploy.yml); no hay workflows `creds-*-prod.yml` separados por servicio.
 
 ### STG/DEV
 
@@ -128,7 +128,7 @@ pnpm deploy:dev -- --with-infra --with-migrate --with-build
 bash scripts/deploy-dev.sh --dry-run
 ```
 
-Con slugs explícitos, `deploy-dev.sh` omite por defecto infraestructura, migraciones y seed de secretos, pero puede reconstruir el servicio si cambió el fingerprint. Los flags `--with-infra`, `--with-migrate`, `--with-build` y `--with-secrets` habilitan explícitamente esas etapas. Ver el detalle de opciones en [Staging / demo](./dev-staging.md).
+Con slugs explícitos, `deploy-dev.sh` omite por defecto infraestructura, migraciones y seed de secretos, pero puede reconstruir el servicio si cambió el fingerprint. Los flags `--with-infra`, `--with-migrate`, `--with-build` y `--with-secrets` habilitan explícitamente esas etapas. Ver el detalle de operación en [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md).
 
 ## Controles de seguridad y consistencia
 
@@ -153,7 +153,7 @@ pnpm env:sync:dev
 pnpm env:sync:dev -- verify
 ```
 
-La documentación de arquitectura y dominios está en [Arquitectura y entornos](./README.md); los runbooks están en [Operación diaria](./day-to-day.md) y [Deploy PROD](../PROD-DEPLOY.md).
+La documentación de arquitectura y dominios está en [Arquitectura y entornos](01 Arquitectura y Entornos.md) y [Dominios públicos y Load Balancer](05 Dominio y Load Balancer.md); los runbooks operativos están en [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md).
 
 ## Rollback
 
@@ -163,9 +163,9 @@ La documentación de arquitectura y dominios está en [Arquitectura y entornos](
 
 ## Referencias
 
-- [Arquitectura y entornos](./README.md)
-- [Staging / demo](./dev-staging.md)
-- [Operación diaria](./day-to-day.md)
-- [Checklist de release](./ship-checklist.md)
-- [`prod-deploy.yml`](../../.github/workflows/prod-deploy.yml)
-- [`dev-deploy.yml`](../../.github/workflows/dev-deploy.yml)
+- [Arquitectura y entornos](01 Arquitectura y Entornos.md)
+- [Configuración, variables de entorno y secretos](03 Configuracion y Secretos.md)
+- [Jobs batch y migraciones de base de datos](04 Jobs y Migraciones.md)
+- [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md)
+- [`prod-deploy.yml`](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/prod-deploy.yml)
+- [`dev-deploy.yml`](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/dev-deploy.yml)

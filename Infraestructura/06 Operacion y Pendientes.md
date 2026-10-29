@@ -9,7 +9,7 @@ PROD usa el proyecto GCP `product-fintech`; STG/DEV usa `product-fintech-dev`. L
 | PROD | `PROD - deploy` (`prod-deploy.yml`) | `bash scripts/pdeploy-prod.sh` |
 | STG/DEV | `DEV - deploy` (`dev-deploy.yml`) | `bash scripts/deploy-dev.sh` |
 
-Los wrappers fijan el proyecto esperado. No cambies el proyecto activo manualmente para intentar redirigir una operación. Detalle de comandos y entradas: [Pipeline CI/CD](./deployment-pipeline.md), [Checklist de release](./ship-checklist.md) y [Staging / demo](./dev-staging.md).
+Los wrappers fijan el proyecto esperado. No cambies el proyecto activo manualmente para intentar redirigir una operación. Detalle de comandos y entradas: [Pipeline CI/CD](02 Pipeline de Despliegue.md) y [Arquitectura y entornos](01 Arquitectura y Entornos.md).
 
 ## Deploy PROD
 
@@ -36,7 +36,7 @@ bash scripts/pdeploy-prod.sh checkout --force
 bash scripts/pdeploy-prod.sh webhooks --dry-run
 ```
 
-`pdeploy-prod.sh` ejecuta un preflight: si PROD está pausado, sigue la opción de reanudar que presente el script; no omitas este control sin entender el estado del entorno. Para el proceso completo, ver [Deploy PROD](../PROD-DEPLOY.md).
+`pdeploy-prod.sh` ejecuta un preflight: si PROD está pausado, sigue la opción de reanudar que presente el script; no omitas este control sin entender el estado del entorno. Para el proceso completo, ver [Pipeline CI/CD](02 Pipeline de Despliegue.md).
 
 ## URLs, secretos y configuración
 
@@ -47,7 +47,7 @@ bash scripts/prod-urls.sh
 bash scripts/prod-urls.sh verify
 ```
 
-Los secretos de runtime se administran en Secret Manager; el catálogo y la distinción entre secretos, literales y URLs están en [Configuración, variables de entorno y secretos](./environment-configuration.md). Ejemplos operativos:
+Los secretos de runtime se administran en Secret Manager; el catálogo y la distinción entre secretos, literales y URLs están en [Configuración, variables de entorno y secretos](03 Configuracion y Secretos.md). Ejemplos operativos:
 
 ```bash
 bash scripts/prod-runtime-secrets.sh plan
@@ -61,7 +61,7 @@ Las credenciales de Experian/Score tienen entradas `required: false` en el catá
 
 ## Capacidad y estado de PROD
 
-La capacidad declarativa por servicio se define en [`prod-service-matrix.json`](../../config/deploy/prod-service-matrix.json) y en la infraestructura del entorno. Los cambios de configuración se aplican mediante el flujo de deploy correspondiente. Los `DB_POOL_MAX` y otros literales están en [`runtime-secrets.json`](../../config/deploy/runtime-secrets.json); no copiar a STG los pools de PROD.
+La capacidad declarativa por servicio se define en [`prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json) y en la infraestructura del entorno. Los cambios de configuración se aplican mediante el flujo de deploy correspondiente. Los `DB_POOL_MAX` y otros literales están en [`runtime-secrets.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/runtime-secrets.json); no copiar a STG los pools de PROD.
 
 Para revisar o cambiar la capacidad operativa en PROD:
 
@@ -85,7 +85,7 @@ bash scripts/run-prod-migrations.sh
 bash scripts/run-prod-seeds.sh
 ```
 
-La detección de migración del workflow acepta `migrate=auto|on|off`. Antes de forzar una migración o ejecutar seeds, confirmar proyecto, bases objetivo y estado de respaldo. Ver [Jobs batch y migraciones](./jobs-and-migrations.md).
+La detección de migración del workflow acepta `migrate=auto|on|off`. Antes de forzar una migración o ejecutar seeds, confirmar proyecto, bases objetivo y estado de respaldo. Ver [Jobs batch y migraciones](04 Jobs y Migraciones.md).
 
 La imagen batch PROD se ejecuta en `creds-jobs-prod`; actualmente hay handlers `auto-debit` y `credit-state-ledger`. Sus schedulers están en PROD, no en STG/DEV:
 
@@ -99,7 +99,7 @@ gcloud run jobs execute creds-jobs-prod \
   --update-env-vars=JOB_NAME=auto-debit
 ```
 
-No reconstruir la imagen para un cambio solo de cron; actualizar el scheduler. Para código, publicar la imagen antes de validar ejecución. Ver el runbook de [jobs y migraciones](./jobs-and-migrations.md).
+No reconstruir la imagen para un cambio solo de cron; actualizar el scheduler. Para código, publicar la imagen antes de validar ejecución. Ver el runbook de [jobs y migraciones](04 Jobs y Migraciones.md).
 
 ## Rollback
 
@@ -120,9 +120,9 @@ No hay un workflow PROD de rollback por servicio ni de restauración de base de 
 
 ### STG/DEV
 
-El workflow [`DEV - rollback`](../../.github/workflows/dev-rollback.yml) revierte un solo servicio a un SHA de imagen existente. Requiere `confirm=ROLLBACK`, `service` y `target`; no cambia el tag `dev-deployed` ni revierte migraciones. Para recuperar datos, el workflow separado [`dev-db-restore.yml`](../../.github/workflows/dev-db-restore.yml) restaura snapshots de DEV.
+El workflow [`DEV - rollback`](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/dev-rollback.yml) revierte un solo servicio a un SHA de imagen existente. Requiere `confirm=ROLLBACK`, `service` y `target`; no cambia el tag `dev-deployed` ni revierte migraciones. Para recuperar datos, el workflow separado [`dev-db-restore.yml`](https://github.com/SumzCol/credits-platform/blob/main/.github/workflows/dev-db-restore.yml) restaura snapshots de DEV.
 
-Ver [Rollback en el pipeline](./deployment-pipeline.md#rollback) y comprobar siempre la compatibilidad entre la versión objetivo y las migraciones ya aplicadas.
+Ver [Rollback en el pipeline](02 Pipeline de Despliegue.md#rollback) y comprobar siempre la compatibilidad entre la versión objetivo y las migraciones ya aplicadas.
 
 ## Añadir un servicio
 
@@ -134,14 +134,14 @@ La flota se define en las matrices de deploy, el catálogo de servicios y Terraf
 4. Probar en DEV y desplegar mediante `DEV - deploy`; luego usar `PROD - deploy` con los slugs seleccionados.
 5. Sincronizar URLs si cambian y validar health checks y acceso desde callers.
 
-Para cambios pequeños, seguir el [Checklist de release](./ship-checklist.md); para las rutas públicas, ver [Dominios públicos y Load Balancer](./domain-lb.md).
+Para validar qué servicios desplegar, consultar [Pipeline CI/CD](02 Pipeline de Despliegue.md); para las rutas públicas, ver [Dominios públicos y Load Balancer](05 Dominio y Load Balancer.md).
 
 ## Pendientes y riesgos operativos
 
 | Tema | Estado según el repositorio | Acción |
 |---|---|---|
 | Front door PROD | Fase F configurada con `fliipa.com`, `apps.fliipa.com` y `api.fliipa.com` vía Firebase Hosting; no hay HTTPS Load Balancer de GCP | Validar en consola Firebase/DNS el dominio, certificado y rewrites antes de cambios operativos |
-| HTTPS Load Balancer | No está provisionado como front door | Es una alternativa futura; no hacer cutover DNS siguiendo un plan antiguo. Ver [Dominio y Load Balancer](./domain-lb.md) |
+| HTTPS Load Balancer | No está provisionado como front door | Es una alternativa futura; no hacer cutover DNS siguiendo un plan antiguo. Ver [Dominio y Load Balancer](05 Dominio y Load Balancer.md) |
 | Custodia y renovación del dominio | No se puede verificar desde el repositorio; la fecha estimada previa de renovación (~2026-09-25) ya pasó | Confirmar hoy custodio y renovación en registrador/WHOIS |
 | Secretos de Experian/Score | Catálogo `required: false`; los valores reales y la revisión activa no se pueden comprobar en Git | Revisar Secret Manager, mount y smoke test de la integración en cada entorno |
 | Batch | Dos handlers y dos schedulers definidos en PROD; ninguno provisionado en STG/DEV | Revisar horarios y habilitación del envío de autodebit antes de cambios |

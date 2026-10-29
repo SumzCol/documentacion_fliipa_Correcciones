@@ -1,4 +1,4 @@
-Infraestructura
+# Infraestructura
 
 | Documento | Infraestructura |
 |---|---|
@@ -14,40 +14,36 @@ Documentar la infraestructura técnica y la operación de Fliipa: proveedor clou
 
 ## Alcance
 
-Cubre los aspectos técnicos de infraestructura y operación de la plataforma. No reemplaza las reglas de negocio ni las especificaciones funcionales. Para la arquitectura de software, consultar [architecture/](../architecture/); para documentación de producto y flujos, consultar [product/](../product/).
+Cubre los aspectos técnicos de infraestructura y operación de la plataforma. No reemplaza las reglas de negocio (consultar [Negocio](../Negocio/README.md)) ni las especificaciones funcionales (consultar [Funcional](../Funcional/README.md)). Para documentación de producto y alcance, consultar [Producto](../Producto/README.md).
 
-La documentación describe principalmente la configuración versionada en el repositorio. No confirma por sí sola el estado actual de recursos, permisos, DNS, certificados o secretos en vivo; esos elementos deben verificarse en GCP y en los sistemas externos antes de operaciones.
+La documentación describe principalmente la configuración versionada en el repositorio `SumzCol/credits-platform`. No confirma por sí sola el estado actual de recursos, permisos, DNS, certificados o secretos en vivo; esos elementos deben verificarse en GCP y en los sistemas externos antes de operaciones.
 
 ## Documentos
 
 | # | Documento | Contenido |
 |---|---|---|
-| 1 | [Arquitectura y entornos](./README.md) | Proveedor GCP, aislamiento PROD y STG/DEV, flota, entrada pública y mapa código-cloud. |
-| 2 | [Pipeline de despliegue](./deployment-pipeline.md) | Workflows vigentes, despliegues manuales, selección de servicios, migraciones y rollback. |
-| 3 | [Configuración, variables de entorno y secretos](./environment-configuration.md) | Configuración declarativa, URLs, variables literales, secretos, Firebase domains e IAM. |
-| 4 | [Jobs batch y migraciones de base de datos](./jobs-and-migrations.md) | Handlers batch registrados, schedulers PROD, aprovisionamiento y migraciones TypeORM. |
-| 5 | [Dominios públicos y Load Balancer](./domain-lb.md) | Firebase Hosting activo, hosts y rutas por entorno; estado del Load Balancer como alternativa futura. |
-| 6 | [Operación diaria, rollback y pendientes](./day-to-day.md) | Comandos operativos, pause/resume, secretos, recuperación y riesgos por validar. |
-| 7 | [Staging / demo](./dev-staging.md) | Particularidades de DEV, límites de capacidad y operaciones del entorno. |
-| 8 | [Checklist de release](./ship-checklist.md) | Decisión de qué construir y desplegar según los archivos modificados. |
-| 9 | [Acceso a APIs internas](./internal-api-access.md) | Acceso IAM, autenticación servicio-a-servicio y límites de exposición. |
-| 10 | [Observabilidad desde admin](./observabilidad-admin.md) | Funciones y configuración de observabilidad del panel administrativo. |
+| 1 | [Arquitectura y entornos](01 Arquitectura y Entornos.md) | Proveedor GCP, aislamiento PROD y STG/DEV, flota, entrada pública y mapa código-cloud. |
+| 2 | [Pipeline de despliegue](02 Pipeline de Despliegue.md) | Workflows vigentes, despliegues manuales, selección de servicios, migraciones y rollback. |
+| 3 | [Configuración, variables de entorno y secretos](03 Configuracion y Secretos.md) | Configuración declarativa, URLs, variables literales, secretos, Firebase domains e IAM. |
+| 4 | [Jobs batch y migraciones de base de datos](04 Jobs y Migraciones.md) | Handlers batch registrados, schedulers PROD, aprovisionamiento y migraciones TypeORM. |
+| 5 | [Dominios públicos y Load Balancer](05 Dominio y Load Balancer.md) | Firebase Hosting activo, hosts y rutas por entorno; estado del Load Balancer como alternativa futura. |
+| 6 | [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md) | Comandos operativos, pause/resume, secretos, recuperación y riesgos por validar. |
 
 ## Documentos relacionados
 
 - [Índice general de documentación](../README.md)
-- [Arquitectura de software](../architecture/README.md)
-- [Documentación de producto](../product/)
-- [Runbook de deploy PROD](../PROD-DEPLOY.md)
-- [Catálogo de configuración de deploy](../../config/deploy/README.md)
-- [Terraform / OpenTofu](../../terraform/README.md)
+- [Documentación de producto](../Producto/README.md)
+- [Documentación de negocio](../Negocio/README.md)
+- [Documentación funcional](../Funcional/README.md)
+- [Operaciones](../Operaciones/README.md)
+- [Autorizaciones, roles y permisos](../Autorizacion Roles y Permiso/README.md)
 
 ## Fuentes de verdad
 
-Si un documento y la configuración del repositorio discrepan, verificar primero el código y estos archivos:
+Si un documento y la configuración del repositorio de código (`SumzCol/credits-platform`) discrepan, verificar primero el código y estos directorios en `main`:
 
-- Proyectos, servicios, capacidad y dominios: [`config/deploy/`](../../config/deploy/)
-- Infraestructura declarativa: [`terraform/envs/prod/`](../../terraform/envs/prod/) y [`terraform/envs/dev/`](../../terraform/envs/dev/)
-- Workflows: [`.github/workflows/`](../../.github/workflows/)
+- Proyectos, servicios, capacidad y dominios: [`config/deploy/`](https://github.com/SumzCol/credits-platform/tree/main/config/deploy)
+- Infraestructura declarativa: [`terraform/envs/prod/`](https://github.com/SumzCol/credits-platform/tree/main/terraform/envs/prod) y [`terraform/envs/dev/`](https://github.com/SumzCol/credits-platform/tree/main/terraform/envs/dev)
+- Workflows: [`.github/workflows/`](https://github.com/SumzCol/credits-platform/tree/main/.github/workflows)
 
 Para estado de recursos, DNS, certificados, IAM y secretos, consultar directamente las consolas y herramientas operativas de los entornos correspondientes.

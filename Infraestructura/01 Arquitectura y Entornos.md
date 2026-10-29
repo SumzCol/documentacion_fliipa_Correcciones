@@ -10,8 +10,8 @@ PROD y STG/DEV son proyectos GCP distintos. Cada entorno mantiene sus propios re
 |---|---|---|
 | Proyecto GCP | `product-fintech` | `product-fintech-dev` |
 | Región | `us-central1` | `us-central1` |
-| Matriz de servicios | [`prod-service-matrix.json`](../../config/deploy/prod-service-matrix.json) | [`dev-service-matrix.json`](../../config/deploy/dev-service-matrix.json) |
-| Configuración GCP local | [`gcp-prod.env`](../../config/deploy/gcp-prod.env) | [`gcp-dev.env`](../../config/deploy/gcp-dev.env) |
+| Matriz de servicios | [`prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json) | [`dev-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/dev-service-matrix.json) |
+| Configuración GCP local | [`gcp-prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-prod.env) | [`gcp-dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-dev.env) |
 | Cloud SQL | `creds-prod-pg` | `creds-dev-pg` (`db-f1-micro`) |
 | Firebase Hosting default | `creds-prod.web.app` | `creds-dev.web.app` |
 | Variable `ENVIRONMENT` | `prod` | `staging` |
@@ -53,7 +53,7 @@ Los scripts de deploy fijan el proyecto esperado mediante `pin_prod_deploy_conte
 
 ## Entrada pública y llamadas entre servicios
 
-Firebase Hosting es el front door configurado actualmente; no hay un HTTPS Load Balancer de GCP delante de la flota. En PROD, los dominios personalizados se configuran en [`domains.prod.env`](../../config/deploy/domains.prod.env). Firebase Hosting reescribe las solicitudes hacia los servicios Cloud Run correspondientes.
+Firebase Hosting es el front door configurado actualmente; no hay un HTTPS Load Balancer de GCP delante de la flota. En PROD, los dominios personalizados se configuran en [`domains.prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.prod.env). Firebase Hosting reescribe las solicitudes hacia los servicios Cloud Run correspondientes.
 
 | Host PROD | Servicio / rutas |
 |---|---|
@@ -62,7 +62,7 @@ Firebase Hosting es el front door configurado actualmente; no hay un HTTPS Load 
 | `https://api.fliipa.com` | B2B en `/api/v1/*`; admin-back en `/admin/api/v1/*`; webhooks en `/api/v1/webhooks/*` |
 | `https://creds-prod.web.app` | Host default de Firebase Hosting; conserva `/admin` en paralelo |
 
-STG/DEV sigue el mismo esquema usando `dev.fliipa.com`, `dev-apps.fliipa.com` y `dev-api.fliipa.com`, además del host default `creds-dev.web.app`. Los orígenes están definidos en [`domains.dev.env`](../../config/deploy/domains.dev.env).
+STG/DEV sigue el mismo esquema usando `dev.fliipa.com`, `dev-apps.fliipa.com` y `dev-api.fliipa.com`, además del host default `creds-dev.web.app`. Los orígenes están definidos en [`domains.dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.dev.env).
 
 ```mermaid
 flowchart TB
@@ -99,7 +99,7 @@ flowchart TB
     ADMINBACK --> SQLCORE
 ```
 
-`core`, `rules-engine` y `communications` usan acceso Cloud Run IAM y no deben exponerse a través del proxy público. Las llamadas servicio-a-servicio autentican con ID token mediante `authenticatedFetch` y agregan `X-Internal-Service-Secret` como defensa adicional. El detalle de rutas, auth y operación está en [Acceso a APIs internas](./internal-api-access.md).
+`core`, `rules-engine` y `communications` usan acceso Cloud Run IAM y no deben exponerse a través del proxy público. Las llamadas servicio-a-servicio autentican con ID token mediante `authenticatedFetch` y agregan `X-Internal-Service-Secret` como defensa adicional. El detalle de configuración, secretos y enrutamiento está en [Configuración, variables de entorno y secretos](03 Configuracion y Secretos.md) y [Dominios públicos y Load Balancer](05 Dominio y Load Balancer.md).
 
 > **Ruteo:** usar rutas concretas por servicio. No enviar un `/api/**` genérico a varios backends ni publicar los servicios IAM detrás de Firebase Hosting.
 
@@ -128,7 +128,7 @@ El nombre de una base de datos no implica una instancia compartida entre entorno
 
 ## Flota de servicios PROD
 
-[`prod-service-matrix.json`](../../config/deploy/prod-service-matrix.json) define paquete, imagen, nombre Cloud Run, tier, acceso, service account de runtime, health check, base de datos e invocadores. El orden de despliegue está en `deployOrder`.
+[`prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json) define paquete, imagen, nombre Cloud Run, tier, acceso, service account de runtime, health check, base de datos e invocadores. El orden de despliegue está en `deployOrder`.
 
 | Slug | Paquete | Cloud Run | Tipo | Tier | Acceso | Runtime SA | Base de datos |
 |---|---|---|---|---|---|---|---|
@@ -150,7 +150,7 @@ Los tiers fijan los valores predeterminados de escalado y recursos; la matriz ta
 | `medium` | 1 / 10 | 50 | 1 | 512 MiB | 60 s |
 | `cheap` | 0 / 2 | 20 | 1 | 512 MiB | 60 s |
 
-En STG/DEV, todos los servicios usan `cheap` por defecto (scale-to-zero). Cloud SQL usa `db-f1-micro` (~25 conexiones), así que los pools deben mantenerse bajos (`DB_POOL_MAX=2–3`). Ver [Staging / demo](./dev-staging.md).
+En STG/DEV, todos los servicios usan `cheap` por defecto (scale-to-zero). Cloud SQL usa `db-f1-micro` (~25 conexiones), así que los pools deben mantenerse bajos (`DB_POOL_MAX=2–3`). Ver [Pipeline de despliegue](02 Pipeline de Despliegue.md) y [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md).
 
 ## Jobs y migraciones
 
@@ -171,7 +171,7 @@ sequenceDiagram
     J->>A: Estado y resumen de ejecución
 ```
 
-Configuración y operación de jobs: [`scripts/provision-prod-jobs.sh`](../../scripts/provision-prod-jobs.sh), [`scripts/provision-prod-jobs-schedulers.sh`](../../scripts/provision-prod-jobs-schedulers.sh) y [day-to-day.md](./day-to-day.md). Los Jobs no forman parte de la matriz de servicios Cloud Run.
+Configuración y operación de jobs: [`scripts/provision-prod-jobs.sh`](https://github.com/SumzCol/credits-platform/blob/main/scripts/provision-prod-jobs.sh), [`scripts/provision-prod-jobs-schedulers.sh`](https://github.com/SumzCol/credits-platform/blob/main/scripts/provision-prod-jobs-schedulers.sh), [Jobs batch y migraciones](04 Jobs y Migraciones.md) y [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md). Los Jobs no forman parte de la matriz de servicios Cloud Run.
 
 ## Despliegue y mapa código ↔ cloud
 
@@ -212,19 +212,18 @@ scripts/
 
 Referencias operativas:
 
-- [Deploy PROD](../PROD-DEPLOY.md)
-- [Staging / demo](./dev-staging.md)
-- [Operación diaria](./day-to-day.md)
-- [Acceso a APIs internas](./internal-api-access.md)
-- [Dominio y Load Balancer](./domain-lb.md)
-- [Checklist de release](./ship-checklist.md)
+- [Pipeline de despliegue](02 Pipeline de Despliegue.md)
+- [Configuración, variables de entorno y secretos](03 Configuracion y Secretos.md)
+- [Jobs batch y migraciones de base de datos](04 Jobs y Migraciones.md)
+- [Dominios públicos y Load Balancer](05 Dominio y Load Balancer.md)
+- [Operación diaria, rollback y pendientes](06 Operacion y Pendientes.md)
 
 ## Fuentes de verdad
 
 Si la documentación y la configuración discrepan, verificar primero estos archivos antes de desplegar:
 
-1. Proyectos y recursos base: [`gcp-prod.env`](../../config/deploy/gcp-prod.env), [`gcp-dev.env`](../../config/deploy/gcp-dev.env).
-2. Servicios y capacidad: [`prod-service-matrix.json`](../../config/deploy/prod-service-matrix.json), [`dev-service-matrix.json`](../../config/deploy/dev-service-matrix.json).
-3. Orígenes públicos: [`domains.prod.env`](../../config/deploy/domains.prod.env), [`domains.dev.env`](../../config/deploy/domains.dev.env).
-4. Secretos y mounts: [`runtime-secrets.json`](../../config/deploy/runtime-secrets.json).
-5. Infraestructura declarativa: [`terraform/envs/prod`](../../terraform/envs/prod), [`terraform/envs/dev`](../../terraform/envs/dev).
+1. Proyectos y recursos base: [`gcp-prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-prod.env), [`gcp-dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-dev.env).
+2. Servicios y capacidad: [`prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json), [`dev-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/dev-service-matrix.json).
+3. Orígenes públicos: [`domains.prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.prod.env), [`domains.dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.dev.env).
+4. Secretos y mounts: [`runtime-secrets.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/runtime-secrets.json).
+5. Infraestructura declarativa: [`terraform/envs/prod`](https://github.com/SumzCol/credits-platform/tree/main/terraform/envs/prod), [`terraform/envs/dev`](https://github.com/SumzCol/credits-platform/tree/main/terraform/envs/dev).

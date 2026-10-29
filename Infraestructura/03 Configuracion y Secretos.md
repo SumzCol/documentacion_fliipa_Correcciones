@@ -6,16 +6,16 @@ La configuración de despliegue vive principalmente en `config/deploy/` y se ver
 
 | Archivo | Responsabilidad |
 |---|---|
-| [`gcp-prod.env`](../../config/deploy/gcp-prod.env) / [`gcp-dev.env`](../../config/deploy/gcp-dev.env) | Proyecto, región, Artifact Registry, Firebase Hosting y Cloud SQL por entorno |
-| [`domains.prod.env`](../../config/deploy/domains.prod.env) / [`domains.dev.env`](../../config/deploy/domains.dev.env) | `DEPLOY_PHASE`, orígenes y paths públicos de cada entorno |
-| [`prod-service-matrix.json`](../../config/deploy/prod-service-matrix.json) / [`dev-service-matrix.json`](../../config/deploy/dev-service-matrix.json) | Servicios Cloud Run, paquete, imagen, tier, acceso, service account, health path y base de datos |
-| [`service-catalog.json`](../../config/deploy/service-catalog.json) / [`service-catalog.dev.json`](../../config/deploy/service-catalog.dev.json) | Mapeo de slug a paquete y nombre de Cloud Run por entorno |
-| [`url-bindings.json`](../../config/deploy/url-bindings.json) | Bindings explícitos de URLs calculadas para paquetes; incluye bindings marcados `buildTime` |
-| [`runtime-secrets.json`](../../config/deploy/runtime-secrets.json) | Catálogo de secretos, variables destino, servicios que los montan y literales comunes/DEV |
-| [`iam-deploy-engineer-role.yaml`](../../config/deploy/iam-deploy-engineer-role.yaml) | Permisos versionados del rol custom `deployEngineer` para operaciones desde laptop |
-| [`runtime-secrets.local.env.example`](../../config/deploy/runtime-secrets.local.env.example) | Plantilla sin valores para el archivo local opcional de aprovisionamiento |
+| [`gcp-prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-prod.env) / [`gcp-dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/gcp-dev.env) | Proyecto, región, Artifact Registry, Firebase Hosting y Cloud SQL por entorno |
+| [`domains.prod.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.prod.env) / [`domains.dev.env`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/domains.dev.env) | `DEPLOY_PHASE`, orígenes y paths públicos de cada entorno |
+| [`prod-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/prod-service-matrix.json) / [`dev-service-matrix.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/dev-service-matrix.json) | Servicios Cloud Run, paquete, imagen, tier, acceso, service account, health path y base de datos |
+| [`service-catalog.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/service-catalog.json) / [`service-catalog.dev.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/service-catalog.dev.json) | Mapeo de slug a paquete y nombre de Cloud Run por entorno |
+| [`url-bindings.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/url-bindings.json) | Bindings explícitos de URLs calculadas para paquetes; incluye bindings marcados `buildTime` |
+| [`runtime-secrets.json`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/runtime-secrets.json) | Catálogo de secretos, variables destino, servicios que los montan y literales comunes/DEV |
+| [`iam-deploy-engineer-role.yaml`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/iam-deploy-engineer-role.yaml) | Permisos versionados del rol custom `deployEngineer` para operaciones desde laptop |
+| [`runtime-secrets.local.env.example`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/runtime-secrets.local.env.example) | Plantilla sin valores para el archivo local opcional de aprovisionamiento |
 
-Valores base por entorno y nombres exactos de recursos: [Arquitectura y entornos](./README.md). Flujo de despliegue y comandos: [Pipeline CI/CD](./deployment-pipeline.md).
+Valores base por entorno y nombres exactos de recursos: [Arquitectura y entornos](01 Arquitectura y Entornos.md). Flujo de despliegue y comandos: [Pipeline CI/CD](02 Pipeline de Despliegue.md).
 
 ## Cómo llega una variable a Cloud Run
 
@@ -83,7 +83,7 @@ El archivo de valores local es opcional, ignorado por Git y no debe compartirse 
 config/deploy/runtime-secrets.local.env
 ```
 
-La plantilla está en [`runtime-secrets.local.env.example`](../../config/deploy/runtime-secrets.local.env.example). El aprovisionamiento local de DEV puede leer los valores de ese archivo. En PROD, los valores se administran directamente en Secret Manager; el archivo local no es requisito para desplegar.
+La plantilla está en [`runtime-secrets.local.env.example`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/runtime-secrets.local.env.example). El aprovisionamiento local de DEV puede leer los valores de ese archivo. En PROD, los valores se administran directamente en Secret Manager; el archivo local no es requisito para desplegar.
 
 Operaciones de PROD:
 
@@ -109,7 +109,7 @@ pnpm env:sync:dev
 pnpm env:sync:dev -- verify
 ```
 
-El wrapper `scripts/sync-deploy-env.sh` usa DEV por defecto; `--prod` selecciona PROD. `pnpm env:sync:dev` corre el flujo completo de cobertura, apply de secretos/literales y URLs; `pnpm env:sync:dev -- verify` valida la cobertura y la configuración ya aplicada. Para cambios de despliegue regulares, seguir el [pipeline CI/CD](./deployment-pipeline.md).
+El wrapper `scripts/sync-deploy-env.sh` usa DEV por defecto; `--prod` selecciona PROD. `pnpm env:sync:dev` corre el flujo completo de cobertura, apply de secretos/literales y URLs; `pnpm env:sync:dev -- verify` valida la cobertura y la configuración ya aplicada. Para cambios de despliegue regulares, seguir el [pipeline CI/CD](02 Pipeline de Despliegue.md).
 
 ## URLs runtime y configuración de frontend
 
@@ -121,8 +121,8 @@ Los IDs de las plantillas de correo y WhatsApp no se configuran como secretos de
 
 | Canal | Catálogo | Archivo |
 |---|---|---|
-| Email (SendGrid) | Keys de plantilla estables que resuelven a IDs y datos requeridos | [`email-templates.ts`](../../services/communications/src/constants/email-templates.ts) |
-| WhatsApp (Zenvia) | Keys de plantilla estables que resuelven a IDs y datos requeridos | [`whatsapp-templates.ts`](../../services/communications/src/constants/whatsapp-templates.ts) |
+| Email (SendGrid) | Keys de plantilla estables que resuelven a IDs y datos requeridos | [`email-templates.ts`](https://github.com/SumzCol/credits-platform/blob/main/services/communications/src/constants/email-templates.ts) |
+| WhatsApp (Zenvia) | Keys de plantilla estables que resuelven a IDs y datos requeridos | [`whatsapp-templates.ts`](https://github.com/SumzCol/credits-platform/blob/main/services/communications/src/constants/whatsapp-templates.ts) |
 
 Las credenciales de proveedor sí son secretos (`SENDGRID_API_KEY`, `ZENVIA_API_KEY`). El número de origen de Zenvia es configuración literal. Para que un caller envíe una plantilla, pasa su key estable; `communications` resuelve el ID del proveedor.
 
@@ -135,7 +135,7 @@ bash scripts/create-deploy-engineer-role.sh
 bash scripts/create-deploy-engineer-role.sh --bind user:you@example.com
 ```
 
-La lista versionada de permisos está en [`iam-deploy-engineer-role.yaml`](../../config/deploy/iam-deploy-engineer-role.yaml). Si un paso falla por permisos, confirmar primero que el proyecto y el entorno activos son los correctos; agregar solo el permiso necesario al rol y volver a ejecutar el script.
+La lista versionada de permisos está en [`iam-deploy-engineer-role.yaml`](https://github.com/SumzCol/credits-platform/blob/main/config/deploy/iam-deploy-engineer-role.yaml). Si un paso falla por permisos, confirmar primero que el proyecto y el entorno activos son los correctos; agregar solo el permiso necesario al rol y volver a ejecutar el script.
 
 ## Cobertura y salud
 
