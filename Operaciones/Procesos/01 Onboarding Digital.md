@@ -106,6 +106,8 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 > **Nota técnica (Ajuste · oct 2026):** `POST /checkouts/landing-exit` (B2B) persiste la salida en landing; no confundir con un checkout en curso que avanza a ubicación, cupo o OTP. Commit de referencia en `credits-platform`: `e802325c`.
 
+> **Nota técnica (Ajuste · nov 2026):** feedback voluntario de salida. En la landing de invitación (sección "Cuéntanos", fuera de la tarjeta de descripción) y en el funnel (X del encabezado o intento de salida), el cliente elige uno o más motivos y puede agregar un comentario opcional. Si elige "Otro", el comentario es obligatorio. En la landing, el registro se guarda vía `POST /checkouts/landing-touch` (`kind: exit_feedback`) y luego `PUT /checkouts`; en el funnel, un nuevo envío sobrescribe el registro previo. Se persiste en `client_data.onboardingExitFeedback` del checkout. Los registros anteriores pueden traer los ids legados (`not_interested`, `unclear_info`, `no_time`, `continue_later`, `have_questions`); los reportes deben aceptar ambos vocabularios. Cambio en `credits-platform` [PR #141](https://github.com/SumzCol/credits-platform/pull/141), pendiente de merge.
+
 ---
 
 ### 4. Registro de ubicación
