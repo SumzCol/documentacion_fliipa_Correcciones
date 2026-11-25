@@ -57,6 +57,8 @@ El proceso inicia cuando el cliente recibe una invitación personalizada por cor
 
 > **Nota técnica (Ajuste · sep 2026):** los OTP de WhatsApp (onboarding y firma) usan plantillas Zenvia definidas en el catálogo de código de `communications` (`otp`, `signatureOtp`). La API key de Zenvia sigue en Secret Manager.
 
+> **Nota técnica (Ajuste · nov 2026):** el hub **Comunicaciones** del panel admin permite campañas masivas (CSV → email/WhatsApp) con plantillas del catálogo de producto. El link de invitado es `{base}/invite/c/{token}` donde el token comercial opaco empieza por `c3.`. En el mapeo de variables del wizard (paso 3) existen dos orígenes: **Link invitado** (URL completa) e **ID invitado (Sin URL)** (solo el token `c3.…`). WhatsApp/Zenvia, cuando la plantilla tiene el prefijo de URL fijo en el botón, debe usar el ID sin URL. Desde acciones de un cliente Core en admin también se puede copiar el link o solo el ID.
+
 ---
 
 ### 2. Registro del documento de identificación
