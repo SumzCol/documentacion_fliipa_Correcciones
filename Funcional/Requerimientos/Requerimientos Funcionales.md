@@ -3,10 +3,10 @@
 | Documento | Requerimientos Funcionales |
 |-----------|------------------------------|
 | **Proyecto** | Fliipa |
-| **Versión** | 1.9 |
+| **Versión** | 2.0 |
 | **Estado** | En revisión |
 | **Responsable** | Producto, negocio y QA |
-| **Última actualización** | 2026-10-27 |
+| **Última actualización** | 2026-11-25 |
 
 ---
 
@@ -26,6 +26,7 @@
 | 1.7 | 2026-09-09 | Equipo técnico | Se corrige RF-013 y RF-006: la firma del contrato **sí se realiza con OTP** (mecanismo vigente en código). Se revierte la nota de ago-2026 que la describía como proveedor externo. |
 | 1.8 | 2026-10-20 | Equipo técnico | RF-005 / RF-032: preaprobación B2B usa reglas duras `PCT_EFECTIVO` y `CUPO_REAL` (no `CUPO_CALCULADO`) con toggles y umbrales en `product_settings.b2b_preapproval_config`; el cupo asignado al core es el `CUPO_REAL` de la observación. |
 | 1.9 | 2026-10-27 | Equipo técnico | RF-005: la tarjeta del checkout muestra `lineCap` de Core en pesos si es mayor que cero; si no, `CUPO_REAL` en pesos. Si Core no responde, el formulario no se bloquea. RF-016: `GET /clients/credit-line` acepta `checkoutId` o `document` + `documentType`. |
+| 2.0 | 2026-11-25 | Equipo técnico | RF-001: contacto WhatsApp/email de captación vía hub Comunicaciones (campañas CSV); invite comercial con URL `/invite/c/c3.…` e ID `c3.…` sin URL para plantillas Zenvia con prefijo fijo. |
 
 ---
 
@@ -58,7 +59,7 @@ Cubre los 11 procesos de negocio definidos en [Alcance del Producto](../../Produ
 
 | ID | Nombre | Descripción | Actor(es) | Prioridad | Estado | Fuente |
 |----|--------|--------------|-----------|-----------|--------|--------|
-| RF-001 | Contacto simultáneo multicanal | El sistema debe permitir contactar simultáneamente al cliente preaprobado por correo, WhatsApp y llamada, a partir de la base de clientes preaprobados de D1. | Asesor comercial, cliente empresarial | Alta | Sin evidencia de automatización propia en el código; gestionado probablemente desde herramientas comerciales externas. | `backends/b2b` (sin controlador encontrado) |
+| RF-001 | Contacto simultáneo multicanal | El sistema debe permitir contactar al cliente preaprobado por correo, WhatsApp y llamada, a partir de la base de clientes preaprobados / audiencia comercial. | Asesor comercial, cliente empresarial | Alta | Parcial: email/WhatsApp masivo desde admin **Comunicaciones** (CSV, plantillas, invite link o ID `c3.…` sin URL). Llamada y orquestación de los tres canales siguen fuera de una herramienta única en código. | `apps/admin` Comunicaciones; `backends/b2b` campañas + `buildCampaignInviteLink`; `services/communications` |
 
 ### Onboarding digital
 

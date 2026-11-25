@@ -70,7 +70,7 @@ Una vez finalizada la solicitud, el caso pasa a **Sistema & Riesgo** para la ver
 
 **Resultado:** Cliente contactado por los tres canales; el sistema monitorea simultáneamente las tres vías para iniciar el proceso apenas el cliente responda por cualquiera de ellas.
 
-**Placeholder\*:** no está definida la plataforma técnica exacta usada para el envío de email y WhatsApp en esta etapa (posiblemente Sendgrid/Zenvia, igual que en el onboarding, a confirmar), ni el orden o los tiempos de espaciamiento entre canales.
+> **Nota técnica (Ajuste · nov 2026):** el envío masivo de email/WhatsApp de captación puede hacerse desde el hub **Comunicaciones** del admin (campañas CSV + plantillas Sendgrid/Zenvia). El enlace de solicitud es un invite comercial (`/invite/c/c3.…`). Para plantillas WhatsApp con botón de URL y prefijo hardcodeado en Zenvia/Meta, la variable de plantilla debe mapearse a **ID invitado (Sin URL)** (solo el token `c3.…`), no a la URL completa. El orden o espaciamiento entre canales (email / WhatsApp / llamada) sigue sin una orquestación automática única documentada.
 
 ---
 
